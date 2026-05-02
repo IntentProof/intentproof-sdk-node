@@ -1,0 +1,25 @@
+{
+  "name": "intentproof-sdk-node",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntentProof/intentproof-sdk-node.git"
+  },
+  "license": "Apache-2.0",
+  "description": "IntentProof SDK Node workspace",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @intentproof/sdk",
+    "format": "npm run format -w @intentproof/sdk",
+    "format:check": "npm run format:check -w @intentproof/sdk",
+    "lint": "npm run lint -w @intentproof/sdk",
+    "publint": "npm run publint -w @intentproof/sdk",
+    "test": "npm run test -w @intentproof/sdk",
+    "ci": "npm run ci -w @intentproof/sdk"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
