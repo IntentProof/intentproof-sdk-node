@@ -1,9 +1,12 @@
 ## **Logs narrate; IntentProof gives you proof.**
 
-Turn your function calls into **verifiable** execution records designed to be reconciled.
+**IntentProof** is **auditable execution records** for actions that must be defensible—**intent** tied to what actually ran.
+
+**Wrap** the calls that matter; each invocation emits one **verifiable** **`ExecutionEvent`**, structured so intent and outcome can be **reconciled** with reality—not only observed.
+
 Observability captures what happened. **IntentProof** tells you whether it matched what was **meant to happen**.
 
-Every wrapped call emits one **`ExecutionEvent`** containing:
+Every **`ExecutionEvent`** contains:
 
 - **`intent`**: what this invocation was meant to prove
 - **`action`**: the stable operation id for this step
@@ -26,14 +29,27 @@ They don't tell you:
 
 It records intent alongside execution so systems can be verified, not just observed.
 
+### Picture this:
+
+It's 4:47 on a Friday. A customer insists the critical action never happened. Support sees scattered traces; engineering sees green checks; finance asks for **one** clean chain: what was **supposed** to occur, what **did** occur, and whether the outcome is **complete**.
+
+Ordinary telemetry shows that *something ran*. It rarely ships an **auditable story** you can hand to someone who doesn't read your codebase. **IntentProof** exists for when the question stops being "what was logged?" and starts being **"prove it."**
+
 ## Requirements
 
 - **Node.js** 22 or newer
 
 ## Install
 
+**Package:** `@intentproof/sdk`.
+
+- [npm — `@intentproof/sdk`](https://www.npmjs.com/package/@intentproof/sdk)
+- [GitHub Releases — IntentProof Node SDK](https://github.com/intentproof/intentproof-sdk-node/releases)
+
+Pin the **version** you want from npm or from GitHub Releases. Replace **`x.y.z`** below with that version.
+
 ```bash
-npm install @intentproof/sdk
+npm install @intentproof/sdk@x.y.z
 ```
 
 ## Quick start
@@ -49,80 +65,81 @@ const refund = client.wrap(
 
 Each refund call emits one **`ExecutionEvent`** with the **`intent`** and **`action`** you chose, the **`inputs`** and **`output`** (or **`error`** + **`status: "error"`**), and timing fields—an execution record you can inspect, export, or verify later.
 
-## `IntentProofClient` API
+## Reference
 
+Detailed tables for the client API, emitted events, configuration, and related exports.
 
-| Member                        | Description                                                                                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`constructor(config?)`**    | Creates a client. Default exporters: a single **`MemoryExporter`** if you omit **`config.exporters`**.                                                                                    |
-| **`configure(config)`**       | Re-applies **`IntentProofConfig`** fields (exporters, error hook, defaults, stack policy).                                                                                                |
-| **`wrap(options, fn)`**       | Returns a function that records one **`ExecutionEvent`** per call (sync or async). **`options`** must satisfy **`assertWrapOptionsShape`** (`intent` / `action` non-empty strings, etc.). |
-| **`flush()`**                 | Awaits **`flush()`** on every **`Exporter`** that implements it, in parallel.                                                                                                             |
-| **`shutdown()`**              | For each **`Exporter`**, awaits **`shutdown()`** if implemented, otherwise **`flush()`** if implemented.                                                                                  |
-| **`getCorrelationId()`**      | Returns the correlation ID from **`AsyncLocalStorage`**, if any.                                                                                                                          |
-| **`withCorrelation(fn)`**     | Runs **`fn`** with a **fresh UUID** as correlation ID for nested wraps.                                                                                                                   |
-| **`withCorrelation(id, fn)`** | Runs **`fn`** with **`id`** trimmed; blank / whitespace-only **`id`** falls back to a UUID.                                                                                               |
+### `IntentProofClient` API
 
+| Member | Description |
+| ------ | ----------- |
+| **`constructor(config?)`** | Creates a client. Default exporters: a single **`MemoryExporter`** if you omit **`config.exporters`**. |
+| **`configure(config)`** | Re-applies **`IntentProofConfig`** fields (exporters, error hook, defaults, stack policy). |
+| **`wrap(options, fn)`** | Returns a function that records one **`ExecutionEvent`** per call (sync or async). **`options`** must satisfy **`assertWrapOptionsShape`** (`intent` / `action` non-empty strings, etc.). |
+| **`flush()`** | Awaits **`flush()`** on every **`Exporter`** that implements it, in parallel. |
+| **`shutdown()`** | For each **`Exporter`**, awaits **`shutdown()`** if implemented, otherwise **`flush()`** if implemented. |
+| **`getCorrelationId()`** | Returns the correlation ID from **`AsyncLocalStorage`**, if any. |
+| **`withCorrelation(fn)`** | Runs **`fn`** with a **fresh UUID** as correlation ID for nested wraps. |
+| **`withCorrelation(id, fn)`** | Runs **`fn`** with **`id`** trimmed; blank / whitespace-only **`id`** falls back to a UUID. |
 
-### Module-level helpers (same module as the client)
+#### Module-level helpers (same module as the client)
 
 These use the same async correlation store as **`IntentProofClient`** instances:
 
+| Export | Description |
+| ------ | ----------- |
+| **`createIntentProofClient(config?)`** | New isolated client (tests, workers, multi-tenant). |
+| **`getIntentProofClient()`** | Lazy singleton used by **`client`**. |
+| **`client`** | Default singleton instance. |
+| **`getCorrelationId()`** | Same behavior as the instance method. |
+| **`runWithCorrelationId(id, fn)`** | Requires a **non-empty** correlation ID after trim; throws if invalid. |
+| **`assertCorrelationId(id)`** | Runtime assertion for correlation ID shape. |
+| **`assertWrapOptionsShape(options)`** | Runtime validation for **`WrapOptions`**. |
 
-| Export                                 | Description                                                            |
-| -------------------------------------- | ---------------------------------------------------------------------- |
-| **`createIntentProofClient(config?)`** | New isolated client (tests, workers, multi-tenant).                    |
-| **`getIntentProofClient()`**           | Lazy singleton used by **`client`**.                                   |
-| **`client`**                           | Default singleton instance.                                            |
-| **`getCorrelationId()`**               | Same behavior as the instance method.                                  |
-| **`runWithCorrelationId(id, fn)`**     | Requires a **non-empty** correlation ID after trim; throws if invalid. |
-| **`assertCorrelationId(id)`**          | Runtime assertion for correlation ID shape.                            |
-| **`assertWrapOptionsShape(options)`**  | Runtime validation for **`WrapOptions`**.                              |
+### `ExecutionEvent` fields
 
+| Field | Description |
+| ----- | ----------- |
+| **`id`** | Unique event id (UUID). |
+| **`correlationId`** | Request or trace correlation ID when present—usually from context or **`WrapOptions`**. |
+| **`intent`** | Human-readable label for what this invocation is meant to prove (outcome, policy goal, or domain). |
+| **`action`** | Stable operation id for this step (often dotted or namespaced). |
+| **`inputs`** | JSON-safe snapshot of call arguments (default) or **`captureInput`** result. |
+| **`output`** | JSON-safe return value or **`captureOutput`** result on success. When **`status`** is **`"error"`**, set only if **`captureError`** returned a value. |
+| **`error`** | On failure: **`name`**, **`message`**, and optional **`stack`** (see **`includeErrorStack`**). |
+| **`status`** | **`"ok"`** if the wrapped call completed normally; **`"error"`** if it threw. |
+| **`startedAt`** | Start time (ISO 8601). |
+| **`completedAt`** | Completion time (ISO 8601). |
+| **`durationMs`** | Wall time between start and completion, in milliseconds. |
+| **`attributes`** | Optional plain record (string / number / boolean values only), merged from client defaults and wrap options. |
 
-## `ExecutionEvent` fields
+### `WrapOptions` and `IntentProofConfig`
 
-| Field                 | Description                                                                                                                                    |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`id`**              | Unique event id (UUID).                                                                                                                        |
-| **`correlationId`**   | Request or trace correlation ID when present—usually from context or **`WrapOptions`**.                                                        |
-| **`intent`**          | Human-readable label for what this invocation is meant to prove (outcome, policy goal, or domain).                                             |
-| **`action`**          | Stable operation id for this step (often dotted or namespaced).                                                                                |
-| **`inputs`**          | JSON-safe snapshot of call arguments (default) or **`captureInput`** result.                                                                   |
-| **`output`**          | JSON-safe return value or **`captureOutput`** result on success. When **`status`** is **`"error"`**, set only if **`captureError`** returned a value. |
-| **`error`**           | On failure: **`name`**, **`message`**, and optional **`stack`** (see **`includeErrorStack`**).                                               |
-| **`status`**          | **`"ok"`** if the wrapped call completed normally; **`"error"`** if it threw.                                                                  |
-| **`startedAt`**       | Start time (ISO 8601).                                                                                                                         |
-| **`completedAt`**     | Completion time (ISO 8601).                                                                                                                    |
-| **`durationMs`**      | Wall time between start and completion, in milliseconds.                                                                                       |
-| **`attributes`**      | Optional plain record (string / number / boolean values only), merged from client defaults and wrap options.                                   |
+#### `WrapOptions` (passed to **`wrap`**)
 
+| Field | Description |
+| ----- | ----------- |
+| **`intent`**, **`action`** | Required, non-empty after trim. |
+| **`correlationId`** | Optional; when set, non-empty after trim. Otherwise the active correlation ID from context is used, if any. |
+| **`attributes`** | Per-invocation dimensions merged over **`defaultAttributes`**. |
+| **`captureInput`**, **`captureOutput`**, **`captureError`** | Optional hooks to replace default **`snapshot`** behavior for inputs, success output, or error-side extra **`output`**. |
+| **`includeErrorStack`** | When `false`, omit **`error.stack`** for this wrap (overrides client default). |
+| **`maxDepth`**, **`maxKeys`**, **`redactKeys`**, **`maxStringLength`** | Forwarded to **`snapshot`** for inputs and outputs (see **`SerializeOptions`** in types). |
 
-## `WrapOptions` and `IntentProofConfig`
+#### `IntentProofConfig` (constructor / **`configure`**)
 
-### `WrapOptions` (passed to **`wrap`**)
+| Field | Description |
+| ----- | ----------- |
+| **`exporters`** | Ordered list of **`Exporter`** instances; each receives every **`ExecutionEvent`**. |
+| **`onExporterError`** | Called when any exporter’s **`export()`** throws or returns a rejected promise. Defaults to **`console.error`**. |
+| **`defaultAttributes`** | Merged into every event’s **`attributes`** (wrap-specific attributes win on key collision). |
+| **`includeErrorStack`** | Default `true`; set `false` in production if stacks must not leave the trust zone. |
 
+### Related exports
 
-| Field                                                                  | Description                                                                                                             |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **`intent`**, **`action`**                                             | Required, non-empty after trim.                                                                                         |
-| **`correlationId`**                                                    | Optional; when set, non-empty after trim. Otherwise the active correlation ID from context is used, if any.             |
-| **`attributes`**                                                       | Per-invocation dimensions merged over **`defaultAttributes`**.                                                          |
-| **`captureInput`**, **`captureOutput`**, **`captureError`**            | Optional hooks to replace default **`snapshot`** behavior for inputs, success output, or error-side extra **`output`**. |
-| **`includeErrorStack`**                                                | When `false`, omit **`error.stack`** for this wrap (overrides client default).                                          |
-| **`maxDepth`**, **`maxKeys`**, **`redactKeys`**, **`maxStringLength`** | Forwarded to **`snapshot`** for inputs and outputs (see **`SerializeOptions`** in types).                               |
-
-
-### `IntentProofConfig` (constructor / **`configure`**)
-
-
-| Field                   | Description                                                                                                      |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **`exporters`**         | Ordered list of **`Exporter`** instances; each receives every **`ExecutionEvent`**.                              |
-| **`onExporterError`**   | Called when any exporter’s **`export()`** throws or returns a rejected promise. Defaults to **`console.error`**. |
-| **`defaultAttributes`** | Merged into every event’s **`attributes`** (wrap-specific attributes win on key collision).                      |
-| **`includeErrorStack`** | Default `true`; set `false` in production if stacks must not leave the trust zone.                               |
-
+- **`MemoryExporter`**, **`HttpExporter`**, **`BoundedQueueExporter`** — Delivery implementations; each implements **`Exporter`**.
+- **`snapshot`** — Same JSON-safe serializer the client uses internally, if you build custom tooling.
+- **`VERSION`** — Package version string injected at build time.
 
 ---
 
@@ -133,6 +150,8 @@ These use the same async correlation store as **`IntentProofClient`** instances:
 Support approves **order `ORD-1042`**. Your service creates the **Stripe refund**, then emails the customer a receipt. **`runWithCorrelationId`** ties both calls to **`req_refund_ord_1042`**. Each **`wrap`** defines its own **`intent`** (the outcome you are proving for that step) and **`action`** (how it is done); **`correlationId`** is what stitches them together.
 
 **`captureInput`** / **`captureOutput`** trim each record to the fields you want in proof (refund id, amounts, message id)—not full vendor payloads.
+
+JSON on the wire uses **camelCase**; TypeScript **`WrapOptions`** use the same camelCase names (e.g. **`captureInput`**).
 
 ```ts
 const createRefund = client.wrap(
@@ -320,7 +339,7 @@ try {
 
 ### 3 — Proof delivery over HTTP (same **`ExecutionEvent`** shape)
 
-**`HttpExporter`** POSTs the same **`ExecutionEvent`** your verifiers see in memory—here alongside **`MemoryExporter`** so tests can assert the wire without a real collector. The request uses **`credentials: "omit"`**; the body is **`{ intentproof: "1", event: … }`** (see exporter implementation). For authenticated collectors, pass **`headers`** (e.g. **`Authorization`**, API keys) — see [Security](#security).
+**`HttpExporter`** POSTs the same **`ExecutionEvent`** your verifiers see in memory—here alongside **`MemoryExporter`** so tests can assert the wire without a real collector. The request omits ambient credentials; the body is **`{ "intentproof": "1", "event": … }`** (see exporter implementation). For authenticated collectors, pass **`headers`** (e.g. **`Authorization`**, API keys) — see [Security](#security).
 
 ```ts
 const runProbe = client.wrap({ intent: "HTTP test", action: "test.http" }, () => 42);
@@ -341,30 +360,39 @@ runProbe();
 
 ## Security
 
+For **vulnerability reporting**, use this repository’s [**Security**](https://github.com/intentproof/intentproof-sdk-node/security) tab (private advisories).
+
 Every **`ExecutionEvent`** you emit is data you may ship off-process. Treat them like audit-grade execution records: they can include PII, secrets, stack traces, and business identifiers depending on your **`snapshot`** / **`capture*`** hooks.
 
 - **Minimize payload:** Use **`redactKeys`**, **`maxDepth`** / **`maxKeys`** / **`maxStringLength`**, and narrow **`captureInput`** / **`captureOutput`** / **`captureError`** so proof records contain only what verifiers need.
 - **Stacks:** Set **`includeErrorStack: false`** on the client (or per wrap) when traces must not leave your trust zone.
 - **HTTP ingest:** Keep collector **`url`** and any redirect behavior under **trusted configuration** (avoid SSRF if URLs were ever influenced by untrusted input). Prefer **HTTPS** and **short-lived credentials** end-to-end.
 - **`HttpExporter` auth:** Pass credentials in **`headers`** (for example **`Authorization: Bearer …`**, **`x-api-key`**, or whatever your collector expects). The SDK does **not** log header values; use short-lived tokens and scope them to ingest only.
-- **Browser vs server:** This package targets **Node**; if you wrap code in a browser, treat the ingest endpoint and headers as you would any cross-origin credential (CORS, CSP, token storage policies are your app’s responsibility).
+- **Runtime surface:** This package targets **Node**; if you wrap code in a browser, treat the ingest endpoint and headers as you would any cross-origin credential (CORS, CSP, token storage policies are your app’s responsibility).
 - **Delivery semantics:** Exporter failures invoke **`onExporterError`** and do **not** roll back the wrapped function’s side effects—design compensating controls if you need strict “delivered exactly once” guarantees.
 
 Custom **`body`** serializers: if **`body(event)`** throws, **`HttpExporter`** notifies **`onError`** and falls back to the same **JSON envelope** path as the default serializer (full event, then a partial envelope, then a minimal `eventSerializeFailed` payload) so **`export()`** still completes and **`fetch`** runs when possible.
 
 ---
 
-## Related exports
+## Canonical specification (`intentproof-spec`)
 
-- **`MemoryExporter`**, **`HttpExporter`**, **`BoundedQueueExporter`** — Delivery implementations; each implements **`Exporter`**.
-- **`snapshot`** — Same JSON-safe serializer the client uses internally, if you build custom tooling.
-- **`VERSION`** — Package version string injected at build time.
+Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[IntentProof specification repository (`intentproof-spec`)](https://github.com/intentproof/intentproof-spec)**.
 
-## Monorepo development
+- **CI:** every push/PR runs `scripts/run-conformance.sh` from that repo (see `.github/workflows/ci.yml`).
+- **Local:** clone `intentproof-spec` **next to** this repository (`../intentproof-spec`), then:
 
-This repository is an npm workspace; the publishable package is [`packages/sdk`](packages/sdk).
+  ```bash
+  npm run spec:conformance
+  ```
 
-Requires **Node.js** 22 or newer (see `.nvmrc` and workspace `engines`).
+  Or set `INTENTPROOF_SPEC_ROOT` to your spec checkout and run `bash scripts/spec-conformance.sh`.
+
+---
+
+## Project development
+
+Layout: **npm workspace** (`package.json` **`workspaces`**, publishable package [`packages/sdk`](packages/sdk)). Requires **Node.js** 22 or newer (see `.nvmrc` and workspace **`engines`**). Release history: [`CHANGELOG.md`](CHANGELOG.md).
 
 ```bash
 npm ci
@@ -373,4 +401,4 @@ npm run ci
 
 ## License
 
-Apache-2.0 (see `LICENSE` at the repository root and in the published npm package).
+Apache-2.0 (see `LICENSE` at the repository root and in the published npm package when released).
