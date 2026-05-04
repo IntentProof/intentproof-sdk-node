@@ -5,10 +5,11 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/IntentProof/intentproof-sdk-node.git",
+    "url": "git+https://github.com/intentproof/intentproof-sdk-node.git",
     "directory": "packages/sdk"
   },
   "keywords": [
+    "IntentProof",
     "intentproof",
     "execution-events",
     "telemetry",
