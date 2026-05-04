@@ -52,6 +52,14 @@ jobs:
         run: npm ci
         working-directory: ${{ github.workspace }}
 
+      - name: Require packages/sdk/README.md to match root README.md
+        working-directory: ${{ github.workspace }}
+        run: |
+          if ! cmp -s README.md packages/sdk/README.md; then
+            echo "::error::packages/sdk/README.md is out of sync with README.md at the repo root. From the repo root run: npm run sync-readme — then commit packages/sdk/README.md"
+            exit 1
+          fi
+
       - name: CI (typecheck, lint, format, tests, build, publint)
         run: npm run ci
 
