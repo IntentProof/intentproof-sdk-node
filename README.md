@@ -44,7 +44,7 @@ Ordinary telemetry shows that *something ran*. It rarely ships an **auditable st
 **Package:** `@intentproof/sdk`.
 
 - [npm — `@intentproof/sdk`](https://www.npmjs.com/package/@intentproof/sdk)
-- [GitHub Releases — IntentProof Node SDK](https://github.com/intentproof/intentproof-sdk-node/releases)
+- [GitHub Releases — IntentProof Node SDK](https://github.com/IntentProof/intentproof-sdk-node/releases)
 
 Pin the **version** you want from npm or from GitHub Releases. Replace **`x.y.z`** below with that version.
 
@@ -360,7 +360,7 @@ runProbe();
 
 ## Security
 
-For **vulnerability reporting**, use this repository’s [**Security**](https://github.com/intentproof/intentproof-sdk-node/security) tab (private advisories).
+For **vulnerability reporting**, use this repository’s [**Security**](https://github.com/IntentProof/intentproof-sdk-node/security) tab (private advisories).
 
 Every **`ExecutionEvent`** you emit is data you may ship off-process. Treat them like audit-grade execution records: they can include PII, secrets, stack traces, and business identifiers depending on your **`snapshot`** / **`capture*`** hooks.
 
