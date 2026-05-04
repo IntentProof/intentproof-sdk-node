@@ -63,32 +63,31 @@ export function snapshot(value: unknown, options: SerializeOptions = {}): unknow
       if (depth >= maxDepth) return "[Array]";
       return v.slice(0, maxKeys).map((item) => walk(item, depth + 1));
     }
-    if (t === "object") {
-      const o = v as object;
-      if (seen.has(o)) return "[Circular]";
-      seen.add(o);
-      if (depth >= maxDepth) return "[Object]";
-      const out: Record<string, unknown> = {};
-      const keys = Object.keys(o);
-      let n = 0;
-      for (const k of keys) {
-        if (n >= maxKeys) {
-          out["…"] = `${keys.length - maxKeys} more keys`;
-          break;
-        }
-        try {
-          if (shouldRedactKey(k, redact)) {
-            out[k] = "[REDACTED]";
-          } else {
-            out[k] = walk((o as Record<string, unknown>)[k], depth + 1);
-          }
-        } catch {
-          out[k] = "[Unserializable]";
-        }
-        n += 1;
+    // Remaining `typeof v === "object"` values (plain objects, Map-like POJOs, etc.).
+    const o = v as object;
+    if (seen.has(o)) return "[Circular]";
+    seen.add(o);
+    if (depth >= maxDepth) return "[Object]";
+    const out: Record<string, unknown> = {};
+    const keys = Object.keys(o);
+    let n = 0;
+    for (const k of keys) {
+      if (n >= maxKeys) {
+        out["…"] = `${keys.length - maxKeys} more keys`;
+        break;
       }
-      return out;
+      try {
+        if (shouldRedactKey(k, redact)) {
+          out[k] = "[REDACTED]";
+        } else {
+          out[k] = walk((o as Record<string, unknown>)[k], depth + 1);
+        }
+      } catch {
+        out[k] = "[Unserializable]";
+      }
+      n += 1;
     }
+    return out;
   }
 
   try {

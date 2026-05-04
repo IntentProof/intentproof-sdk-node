@@ -85,8 +85,9 @@ export class BoundedQueueExporter implements Exporter {
 
     if (this.queue.length >= cap) {
       if (this.strategy === "drop-oldest") {
-        const dropped = this.queue.shift();
-        if (dropped) this.onDrop?.(dropped, "queue-overflow-drop-oldest");
+        // `length >= cap` and finite cap imply a non-empty queue before push.
+        const dropped = this.queue.shift()!;
+        this.onDrop?.(dropped, "queue-overflow-drop-oldest");
         this.queue.push(event);
       } else {
         this.onDrop?.(event, "queue-overflow-drop-newest");
