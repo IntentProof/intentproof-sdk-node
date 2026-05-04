@@ -1,4 +1,4 @@
-# Publish @intentproof/sdk to npm when a semver git tag is pushed (e.g. v0.1.1).
+# Publish @intentproof/sdk to npm when a semver git tag is pushed (e.g. v0.1.2).
 # Prerequisite: repository secret NPM_TOKEN (npm automation token with publish access).
 name: Release
 

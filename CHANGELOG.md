@@ -6,6 +6,8 @@ All notable changes to this repository are documented here. The publishable pack
 
 ## Unreleased
 
+## 0.1.2 — 2026-05-04
+
 - Add **`CHANGELOG.md`** (this file).
 - **CI:** run the [IntentProof specification](https://github.com/intentproof/intentproof-spec) Vitest conformance oracle on every push/PR (`.github/workflows/ci.yml`).
 - **Local:** `npm run spec:conformance` via [`scripts/spec-conformance.sh`](scripts/spec-conformance.sh) (sibling clone `../intentproof-spec` or `INTENTPROOF_SPEC_ROOT`).
