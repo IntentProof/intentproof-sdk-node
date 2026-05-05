@@ -349,7 +349,7 @@ describe("sdk: wrap, capture policy, and dispatch", () => {
       (n: number) => n + 1,
     );
     expect(capIn(1)).toBe(2);
-    expect(memory.getEvents()[0]!.inputs).toEqual([1]);
+    expect(memory.getEvents()[0]!.inputs).toEqual({ args: [1] });
 
     memory.clear();
 

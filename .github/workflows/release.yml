@@ -11,9 +11,42 @@ on:
 permissions:
   contents: read
   id-token: write
+  checks: read
 
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify required CI checks passed on release SHA
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const required = ["hardening", "intentproof-spec", "sdk (22)", "sdk (24)"];
+            const { owner, repo } = context.repo;
+            const ref = context.sha;
+            const runs = await github.paginate(github.rest.checks.listForRef, {
+              owner,
+              repo,
+              ref,
+              per_page: 100,
+            });
+            const names = runs.map((r) => `${r.name}:${r.conclusion ?? r.status}`);
+            core.info(`check-runs on ${ref}: ${names.join(", ")}`);
+            for (const name of required) {
+              const matches = runs.filter((r) => r.name === name);
+              if (matches.length === 0) {
+                core.setFailed(`Missing required check-run: ${name}`);
+                continue;
+              }
+              const ok = matches.some((r) => r.conclusion === "success");
+              if (!ok) {
+                core.setFailed(`Required check-run not successful: ${name}`);
+              }
+            }
+
   publish:
+    needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -22,6 +55,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
+        with:
+          repository: IntentProof/intentproof-spec
+          path: intentproof-spec
 
       - name: Verify git tag matches package.json version
         if: github.ref_type == 'tag'
@@ -45,7 +82,15 @@ jobs:
         run: npm ci
         working-directory: ${{ github.workspace }}
 
+      - name: No handwritten model/types outside generated schema package
+        working-directory: ${{ github.workspace }}
+        env:
+          INTENTPROOF_SPEC_ROOT: ${{ github.workspace }}/intentproof-spec
+        run: bash scripts/check-no-handwritten-model-types.sh
+
       - name: CI (typecheck, lint, format, tests, build, publint)
+        env:
+          INTENTPROOF_SPEC_ROOT: ${{ github.workspace }}/intentproof-spec
         run: npm run ci
 
       - name: Publish to npm

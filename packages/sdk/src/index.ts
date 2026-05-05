@@ -12,12 +12,18 @@ declare const __INTENTPROOF_SDK_VERSION__: string;
 export const VERSION = __INTENTPROOF_SDK_VERSION__;
 
 export type {
+  ExecutionError,
   ExecutionErrorSnapshot,
   ExecutionEvent,
+  ExecutionEventBase,
   ExecutionStatus,
   Exporter,
-  SerializeOptions,
   IntentProofConfig,
+  IntentProofExecutionEventV1,
+  IntentProofRuntimeConfigV1,
+  IntentProofWrapOptionsV1,
+  JsonValue,
+  SerializeOptions,
   WrapOptions,
 } from "./types.js";
 
@@ -43,6 +49,13 @@ export {
   getIntentProofClient,
   runWithCorrelationId,
 } from "./client.js";
+
+export {
+  assertValidExecutionEventWire,
+  validateExecutionEvent,
+  validateIntentProofConfig,
+  validateWrapOptions,
+} from "./validators.js";
 
 /** Default singleton — same instance as `getIntentProofClient()`. */
 export const client = getIntentProofClient();

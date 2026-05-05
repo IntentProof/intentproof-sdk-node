@@ -379,7 +379,9 @@ Custom **`body`** serializers: if **`body(event)`** throws, **`HttpExporter`** n
 
 Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[IntentProof specification repository (`intentproof-spec`)](https://github.com/intentproof/intentproof-spec)**.
 
-- **CI:** every push/PR runs `scripts/run-conformance.sh` from that repo (see `.github/workflows/ci.yml`).
+- **Version pin:** **`intentproofSpecVersion`** in the root **`package.json`** and **`packages/sdk/package.json`** matches **`spec.json`** in that repo; **`scripts/check-sdk-spec-pin.sh`** enforces it before conformance.
+
+- **CI:** every push/PR checks out this SDK plus **`intentproof-spec`** and runs **`scripts/spec-conformance.sh`** (pin check + full oracle; see `.github/workflows/ci.yml`). The **`sdk`** job sets **`INTENTPROOF_SPEC_ROOT`** so **`packages/sdk`** Vitest also imports the spec **`sdk_test_harness`**—golden **`execution_event_cases.jsonl`** oracle plus a **`MemoryExporter`** **`validateExecutionEvent`** smoke (`spec_conformance.integration.test.ts`).
 - **Local:** clone `intentproof-spec` **next to** this repository (`../intentproof-spec`), then:
 
   ```bash
@@ -387,6 +389,14 @@ Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[In
   ```
 
   Or set `INTENTPROOF_SPEC_ROOT` to your spec checkout and run `bash scripts/spec-conformance.sh`.
+
+- **Generated fingerprint metadata:** schema codegen writes **`packages/sdk/src/generated/spec_fingerprint.json`** (spec version, generator version, per-schema SHA-256, aggregate hash). Validate/update generated artifacts with:
+
+  ```bash
+  bash scripts/verify-generated-types.sh
+  ```
+
+- **No handwritten model types:** **`scripts/check-no-handwritten-model-types.sh`** delegates to the shared **`intentproof-spec`** checker. It is wired into **`npm run ci`**, CI, and release, and fails if schema model/type declarations appear outside **`packages/sdk/src/generated`** or if the bridge aliases in **`packages/sdk/src/types.ts`** stop mapping to generated types.
 
 ---
 
