@@ -7,23 +7,57 @@ on:
   pull_request:
 
 jobs:
-  intentproof-spec:
+  hardening:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - uses: actions/checkout@v6
         with:
-          repository: intentproof/intentproof-spec
+          repository: IntentProof/intentproof-spec
           path: intentproof-spec
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version-file: intentproof-spec/.nvmrc
           cache: npm
           cache-dependency-path: intentproof-spec/package-lock.json
 
-      - name: Canonical spec conformance (Vitest oracle)
-        run: bash intentproof-spec/scripts/run-conformance.sh intentproof-spec
+      - name: SDK hardening contract audit (spec-only + drift guards)
+        run: bash intentproof-spec/scripts/check-sdk-hardening.sh "${{ github.workspace }}"
+
+  intentproof-spec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/checkout@v6
+        with:
+          repository: IntentProof/intentproof-spec
+          path: intentproof-spec
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: intentproof-spec/.nvmrc
+          cache: npm
+          cache-dependency-path: intentproof-spec/package-lock.json
+
+      - name: Canonical spec conformance (pin check + oracle + replay)
+        env:
+          INTENTPROOF_SPEC_ROOT: ${{ github.workspace }}/intentproof-spec
+          INTENTPROOF_SDK_ID: node
+          INTENTPROOF_REPLAY_VERIFY: "1"
+          INTENTPROOF_CONFORMANCE_JSON: "1"
+        run: bash scripts/spec-conformance.sh
+
+      - name: Upload conformance report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-report-node
+          path: intentproof-spec/conformance-report.json
+          if-no-files-found: error
 
   sdk:
     runs-on: ubuntu-latest
@@ -40,6 +74,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - uses: actions/checkout@v6
+        with:
+          repository: IntentProof/intentproof-spec
+          path: intentproof-spec
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
@@ -60,7 +99,9 @@ jobs:
             exit 1
           fi
 
-      - name: CI (typecheck, lint, format, tests, build, publint)
+      - name: CI (spec guards, typecheck, lint, format, tests, build, publint)
+        env:
+          INTENTPROOF_SPEC_ROOT: ${{ github.workspace }}/intentproof-spec
         run: npm run ci
 
       - name: Upload coverage (lcov)

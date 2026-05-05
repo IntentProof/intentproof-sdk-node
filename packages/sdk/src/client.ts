@@ -3,17 +3,35 @@ import { randomUUID } from "crypto";
 import { MemoryExporter } from "./exporters/memory.js";
 import { describeValueType, isPromiseLike } from "./runtime.js";
 import { snapshot } from "./snapshot.js";
+import { assertValidExecutionEventWire } from "./validators.js";
 import type {
   ExecutionErrorSnapshot,
   ExecutionEvent,
+  ExecutionEventBase,
   ExecutionStatus,
   Exporter,
-  SerializeOptions,
   IntentProofConfig,
+  SerializeOptions,
   WrapOptions,
 } from "./types.js";
+import type {
+  IntentProofExecutionEventV1,
+  JsonValue,
+} from "./generated/execution-event.js";
 
 const correlationStore = new AsyncLocalStorage<string>();
+
+/**
+ * JSON Schema requires `inputs` to be an object; positional snapshots may be arrays — wrap them.
+ */
+function normalizeInputsForExecutionEvent(
+  inputs: unknown,
+): IntentProofExecutionEventV1["inputs"] {
+  if (inputs !== null && typeof inputs === "object" && !Array.isArray(inputs)) {
+    return inputs as IntentProofExecutionEventV1["inputs"];
+  }
+  return { args: inputs } as IntentProofExecutionEventV1["inputs"];
+}
 
 /**
  * Validates a correlation id: non-empty string after trim (same as `WrapOptions.correlationId` /
@@ -287,14 +305,17 @@ export class IntentProofClient {
         inputs = snapshot(args as unknown[], serOpts);
       }
 
-      const base = {
+      const base: ExecutionEventBase = {
         id: randomUUID(),
         correlationId,
         intent: options.intent,
         action: options.action,
-        inputs,
+        inputs: normalizeInputsForExecutionEvent(inputs),
         startedAt: startedAt.toISOString(),
-        attributes: mergeAttrs(self.defaultAttributes, options.attributes),
+        attributes: mergeAttrs(
+          self.defaultAttributes,
+          options.attributes,
+        ) as IntentProofExecutionEventV1["attributes"],
       };
 
       try {
@@ -336,10 +357,7 @@ export class IntentProofClient {
 
   private handleAsync(
     p: PromiseLike<unknown>,
-    base: Omit<
-      ExecutionEvent,
-      "status" | "completedAt" | "durationMs" | "output" | "error"
-    >,
+    base: ExecutionEventBase,
     options: WrapOptions,
     serOpts: SerializeOptions,
     startedAt: Date,
@@ -376,10 +394,7 @@ export class IntentProofClient {
   }
 
   private emitComplete(
-    base: Omit<
-      ExecutionEvent,
-      "status" | "completedAt" | "durationMs" | "output" | "error"
-    >,
+    base: ExecutionEventBase,
     status: ExecutionStatus,
     result: unknown,
     error: unknown | undefined,
@@ -420,7 +435,7 @@ export class IntentProofClient {
             status,
             completedAt: completedAt.toISOString(),
             durationMs,
-            output,
+            output: output as JsonValue | undefined,
           }
         : {
             ...base,
@@ -428,13 +443,14 @@ export class IntentProofClient {
             completedAt: completedAt.toISOString(),
             durationMs,
             error: errSnap,
-            ...(output !== undefined ? { output } : {}),
+            ...(output !== undefined ? { output: output as JsonValue } : {}),
           };
 
     this.dispatch(event);
   }
 
   private dispatch(event: ExecutionEvent): void {
+    assertValidExecutionEventWire(JSON.parse(JSON.stringify(event)) as unknown);
     for (const ex of this.exporters) {
       try {
         const r = ex.export(event);

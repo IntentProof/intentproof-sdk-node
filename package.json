@@ -1,5 +1,6 @@
 {
   "name": "intentproof-sdk-node",
+  "intentproofSpecVersion": "spec-v1.0.0",
   "private": true,
   "repository": {
     "type": "git",
@@ -19,6 +20,8 @@
     "test": "npm run test -w @intentproof/sdk",
     "sync-readme": "npm run sync-readme -w @intentproof/sdk",
     "ci": "npm run ci -w @intentproof/sdk",
+    "generate:types": "npm run generate:types -w @intentproof/sdk",
+    "verify:types": "npm run verify:types -w @intentproof/sdk",
     "spec:conformance": "bash scripts/spec-conformance.sh"
   },
   "engines": {

@@ -1,6 +1,7 @@
 {
   "name": "@intentproof/sdk",
   "version": "0.1.2",
+  "intentproofSpecVersion": "spec-v1.0.0",
   "description": "TypeScript SDK for IntentProof",
   "license": "Apache-2.0",
   "repository": {
@@ -39,6 +40,10 @@
     "README.md"
   ],
   "sideEffects": false,
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -52,15 +57,19 @@
     "publint": "publint",
     "sync-readme": "cp ../../README.md README.md",
     "prepack": "npm run sync-readme",
-    "ci": "npm run sync-readme && npm run typecheck && npm run lint && npm run format:check && npm run test:coverage && npm run build && npm run publint"
+    "generate:types": "bash ../../scripts/generate-schema-types.sh",
+    "verify:types": "bash ../../scripts/verify-generated-types.sh",
+    "ci": "npm run sync-readme && bash ../../scripts/check-no-bundled-schema.sh && bash ../../scripts/check-no-handwritten-model-types.sh && npm run verify:types && npm run typecheck && npm run lint && npm run format:check && npm run test:coverage && npm run build && npm run publint"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^4.1.5",
+    "json-stable-stringify": "^1.0.1",
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.6.0",
+    "json-schema-to-typescript": "15.0.4",
     "prettier": "^3.8.3",
     "publint": "^0.3.18",
     "tsup": "^8.5.1",

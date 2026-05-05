@@ -1,28 +1,45 @@
-/** Wire shape for emitted execution records (verification / ingest). */
+/**
+ * Public types for the SDK.
+ *
+ * Wire shapes (`ExecutionEvent`, `ExecutionError`, JSON `IntentProofConfig` subset) are generated from
+ * `intentproof-spec` JSON Schemas — see `src/generated/`. Regenerate: `npm run generate:types -w @intentproof/sdk`.
+ * `WrapOptions` adds TypeScript-only capture callbacks and snapshot options; it is not identical to the
+ * JSON `wrap_options` schema (see `IntentProofWrapOptionsV1` for the schema flags).
+ */
+import type { IntentProofRuntimeConfigV1 } from "./generated/intentproof-config.js";
+import type {
+  ExecutionError,
+  IntentProofExecutionEventV1,
+  JsonValue,
+} from "./generated/execution-event.js";
+import type { IntentProofWrapOptionsV1 } from "./generated/wrap-options.js";
 
-export type ExecutionStatus = "ok" | "error";
+export type {
+  JsonValue,
+  IntentProofExecutionEventV1,
+  ExecutionError,
+  IntentProofWrapOptionsV1,
+};
+export type { IntentProofRuntimeConfigV1 } from "./generated/intentproof-config.js";
 
-export interface ExecutionErrorSnapshot {
-  readonly name: string;
-  readonly message: string;
-  readonly stack?: string;
-}
+export type ExecutionStatus = IntentProofExecutionEventV1["status"];
 
-/** One record per wrapped invocation — stable fields for a verifier to consume. */
-export interface ExecutionEvent {
-  readonly id: string;
-  readonly correlationId?: string;
-  readonly intent: string;
-  readonly action: string;
-  readonly inputs: unknown;
-  readonly output?: unknown;
-  readonly error?: ExecutionErrorSnapshot;
-  readonly status: ExecutionStatus;
-  readonly startedAt: string;
-  readonly completedAt: string;
-  readonly durationMs: number;
-  readonly attributes?: Readonly<Record<string, string | number | boolean>>;
-}
+/** Wire error payload — same fields as the normative `ExecutionError` object in the JSON Schema. */
+export type ExecutionErrorSnapshot = Readonly<ExecutionError>;
+
+/** One record per wrapped invocation; identical to the `execution_event` v1 schema shape. */
+export type ExecutionEvent = Readonly<IntentProofExecutionEventV1>;
+
+/**
+ * Event fields built in {@link import("./client.js").IntentProofClient.wrap} before status, completion
+ * time, `output`, and `error` are set. Declared with `Pick` so it stays aligned with the generated
+ * wire type (avoids `Omit` on the schema’s index-signature intersection).
+ */
+export type ExecutionEventBase = Pick<
+  IntentProofExecutionEventV1,
+  "id" | "intent" | "action" | "inputs" | "startedAt"
+> &
+  Partial<Pick<IntentProofExecutionEventV1, "correlationId" | "attributes">>;
 
 export interface Exporter {
   /** Must not throw synchronously; async exporters may return a Promise. */
@@ -47,6 +64,10 @@ export interface SerializeOptions {
   maxStringLength?: number;
 }
 
+/**
+ * Call-site `wrap` options. Includes snapshot tuning plus TypeScript-only `capture*` callbacks.
+ * For the JSON `wrap_options` document shape (booleans, attributes, etc.), see {@link IntentProofWrapOptionsV1}.
+ */
 export interface WrapOptions extends SerializeOptions {
   /** Non-empty after trim; enforced at runtime in {@link import("./client.js").assertWrapOptionsShape}. */
   intent: string;
@@ -66,9 +87,20 @@ export interface WrapOptions extends SerializeOptions {
   includeErrorStack?: boolean;
 }
 
-export interface IntentProofConfig {
+type SchemaConfigFields = Partial<
+  Pick<
+    IntentProofRuntimeConfigV1,
+    "version" | "defaultWrapOptions" | "correlation" | "serialization"
+  >
+>;
+
+/**
+ * Runtime SDK configuration. `exporters` are live class instances; all other fields that appear in
+ * `intentproof_config` JSON are taken from the generated {@link IntentProofRuntimeConfigV1} shape.
+ */
+export type IntentProofConfig = {
   exporters?: Exporter[];
-  /** Invoked if an exporter throws synchronously or rejects. Defaults to `console.error` when unset. */
+  /** Invoked when an exporter throws synchronously or rejects. Defaults to `console.error` when unset. */
   onExporterError?: (error: unknown, event: ExecutionEvent) => void;
   /** Default attributes merged into every event (e.g. service, env). */
   defaultAttributes?: Readonly<Record<string, string | number | boolean>>;
@@ -77,4 +109,4 @@ export interface IntentProofConfig {
    * Prefer false in production unless you operate a locked-down ingest pipeline.
    */
   includeErrorStack?: boolean;
-}
+} & SchemaConfigFields;
