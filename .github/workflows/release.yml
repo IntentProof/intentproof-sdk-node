@@ -55,9 +55,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Resolve pinned intentproof-spec revision
+        id: spec_pin
+        run: |
+          set -euo pipefail
+          SHA="$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).intentproofSpecCommit")"
+          echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
+
       - uses: actions/checkout@v6
         with:
           repository: IntentProof/intentproof-spec
+          ref: ${{ steps.spec_pin.outputs.sha }}
+          fetch-depth: 0
           path: intentproof-spec
 
       - name: Verify git tag matches package.json version

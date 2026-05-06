@@ -2,6 +2,7 @@
   "name": "@intentproof/sdk",
   "version": "0.1.2",
   "intentproofSpecVersion": "spec-v1.0.0",
+  "intentproofSpecCommit": "c712a84f6bea82bd57448175e648cf4ba492d844",
   "description": "TypeScript SDK for IntentProof",
   "license": "Apache-2.0",
   "repository": {
@@ -59,7 +60,7 @@
     "prepack": "npm run sync-readme",
     "generate:types": "bash ../../scripts/generate-schema-types.sh",
     "verify:types": "bash ../../scripts/verify-generated-types.sh",
-    "ci": "npm run sync-readme && bash ../../scripts/check-no-bundled-schema.sh && bash ../../scripts/check-no-handwritten-model-types.sh && npm run verify:types && npm run typecheck && npm run lint && npm run format:check && npm run test:coverage && npm run build && npm run publint"
+    "ci": "npm run sync-readme && bash ../../scripts/check-sdk-spec-pin.sh \"${INTENTPROOF_SPEC_ROOT:?}\" && bash ../../scripts/check-no-bundled-schema.sh && bash ../../scripts/check-no-handwritten-model-types.sh && npm run verify:types && npm run typecheck && npm run lint && npm run format:check && npm run test:coverage && npm run build && npm run publint"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

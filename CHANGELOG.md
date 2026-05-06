@@ -6,18 +6,10 @@ All notable changes to this repository are documented here. The publishable pack
 
 ## Unreleased
 
-- Add generated schema fingerprint metadata (`packages/sdk/src/generated/spec_fingerprint.json`) during type generation.
-- Add fingerprint conformance test (`packages/sdk/src/generated_fingerprint.test.ts`) to verify schema hashes/aggregate against pinned `intentproof-spec`.
-- Harden generated drift checks: verify script now fails on untracked files in generated directories.
-- Tighten bundled-schema guard: only `./intentproof-spec/schema/*.schema.json` is allowed; any other checked-in `*.schema.json` path now fails CI.
-- Harden model/type provenance enforcement: `scripts/check-no-handwritten-model-types.sh` delegates to the shared `intentproof-spec` checker for hardening compliance.
-- Fix one wire-type import regression by sourcing `JsonValue` directly from `packages/sdk/src/generated/execution-event.ts` in `packages/sdk/src/client.ts`.
-- CI hardening: add explicit `hardening` workflow job and release preflight check-run gate (`hardening`, `intentproof-spec`, `sdk (22)`, `sdk (24)`).
-- Release workflow now checks out `intentproof-spec` and sets `INTENTPROOF_SPEC_ROOT` before running `npm run ci`.
-- SDK conformance wrapper now exports standardized report metadata fields (`INTENTPROOF_SDK_NAME`, `INTENTPROOF_SDK_LANGUAGE`, `INTENTPROOF_SDK_VERSION`).
-- CI `intentproof-spec` job now uploads `intentproof-spec/conformance-report.json` as `conformance-report-node`.
-- `scripts/spec-conformance.sh` falls back to `./intentproof-spec` when the env var and sibling clone are absent (matches handwritten-check resolution and typical CI layout).
-- CI **sdk** matrix runs the delegated handwritten check only inside **`npm run ci`** (removed duplicate standalone step).
+- **Spec-derived artifacts and guards:** Emit `packages/sdk/src/generated/spec_fingerprint.json` during typegen; add `generated_fingerprint.test.ts`; fail verify when generated output is untracked; bundled-schema policy rejects stray `*.schema.json`; delegate `check-no-handwritten-model-types.sh` to the shared spec checker; import `JsonValue` from `generated/execution-event.ts` in `client.ts` (not `types.ts`).
+- **Pinned spec revision:** Add **`intentproofSpecCommit`** to root and **`packages/sdk`** **`package.json`**; CI and release check out that SHA (`ref`, `fetch-depth: 0`). **`scripts/check-sdk-spec-pin.sh`** execs **`intentproof-spec/scripts/check-sdk-spec-pins.sh`**. **`npm run ci`** runs the pin check first when **`INTENTPROOF_SPEC_ROOT`** is set. **`scripts/spec-conformance.sh`** resolves sibling **`../intentproof-spec`**, env **`INTENTPROOF_SPEC_ROOT`**, or in-repo **`./intentproof-spec`**.
+- **CI and release:** Concurrency cancels superseded runs on the same PR/ref. **`hardening`** job and release preflight require **`hardening`**, **`intentproof-spec`**, **`sdk (22)`**, **`sdk (24)`**. Conformance job sets **`INTENTPROOF_SDK_*`** metadata, uploads **`intentproof-spec/conformance-report.json`** as **`conformance-report-node`** via **`actions/upload-artifact@v7`**. Release checks out pinned spec, sets **`INTENTPROOF_SPEC_ROOT`**, then **`npm run ci`**. **`sdk`** matrix drops the duplicate handwritten step (check stays inside **`npm run ci`**).
+- **Docs:** **[`CONTRIBUTING.md`](CONTRIBUTING.md)** and README cross-links for shared **`intentproof-spec`** terminology (**`INTENTPROOF_SPEC_ROOT`**, **`intentproofSpecCommit`**).
 ## 0.1.2 — 2026-05-04
 
 - Add **`CHANGELOG.md`** (this file).

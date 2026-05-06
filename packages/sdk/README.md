@@ -377,9 +377,11 @@ Custom **`body`** serializers: if **`body(event)`** throws, **`HttpExporter`** n
 
 ## Canonical specification (`intentproof-spec`)
 
-Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[IntentProof specification repository (`intentproof-spec`)](https://github.com/intentproof/intentproof-spec)**.
+**Shared pins and terminology** (`INTENTPROOF_SPEC_ROOT`, **`intentproofSpecCommit`**, script names): **[`intentproof-spec` CONTRIBUTING — Terminology](https://github.com/IntentProof/intentproof-spec/blob/main/CONTRIBUTING.md#terminology-shared-with-sdk-repos)**.
 
-- **Version pin:** **`intentproofSpecVersion`** in the root **`package.json`** and **`packages/sdk/package.json`** matches **`spec.json`** in that repo; **`scripts/check-sdk-spec-pin.sh`** enforces it before conformance.
+Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[IntentProof specification repository (`intentproof-spec`)](https://github.com/IntentProof/intentproof-spec)**.
+
+- **Version pin:** **`intentproofSpecVersion`** and **`intentproofSpecCommit`** in the root **`package.json`** and **`packages/sdk/package.json`** match **`spec.json`** and the spec **`HEAD`** checkout; **`scripts/check-sdk-spec-pin.sh`** enforces this before conformance.
 
 - **CI:** every push/PR checks out this SDK plus **`intentproof-spec`** and runs **`scripts/spec-conformance.sh`** (pin check + full oracle; see `.github/workflows/ci.yml`). The **`sdk`** job sets **`INTENTPROOF_SPEC_ROOT`** so **`packages/sdk`** Vitest also imports the spec **`sdk_test_harness`**—golden **`execution_event_cases.jsonl`** oracle plus a **`MemoryExporter`** **`validateExecutionEvent`** smoke (`spec_conformance.integration.test.ts`).
 - **Local:** clone `intentproof-spec` **next to** this repository (`../intentproof-spec`), then:
@@ -401,6 +403,8 @@ Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[In
 ---
 
 ## Project development
+
+Contributing and shared **`intentproof-spec`** terminology: **[`CONTRIBUTING.md`](CONTRIBUTING.md)**.
 
 Layout: **npm workspace** (`package.json` **`workspaces`**, publishable package [`packages/sdk`](packages/sdk)). Requires **Node.js** 22 or newer (see `.nvmrc` and workspace **`engines`**). Release history: [`CHANGELOG.md`](CHANGELOG.md).
 
