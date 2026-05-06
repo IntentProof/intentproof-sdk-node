@@ -3,6 +3,7 @@
 set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo"
+npm ci
 bash scripts/generate-schema-types.sh
 npm run format -w @intentproof/sdk
 git diff --exit-code -- packages/sdk/src/generated
