@@ -2,7 +2,7 @@
   "name": "@intentproof/sdk",
   "version": "0.1.2",
   "intentproofSpecVersion": "spec-v1.0.0",
-  "intentproofSpecCommit": "c712a84f6bea82bd57448175e648cf4ba492d844",
+  "intentproofSpecCommit": "8417426f5927a4d8e3437e046c172dc15eceeb33",
   "description": "TypeScript SDK for IntentProof",
   "license": "Apache-2.0",
   "repository": {
