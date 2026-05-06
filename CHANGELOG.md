@@ -6,10 +6,25 @@ All notable changes to this repository are documented here. The publishable pack
 
 ## Unreleased
 
-- **Spec-derived artifacts and guards:** Emit `packages/sdk/src/generated/spec_fingerprint.json` during typegen; add `generated_fingerprint.test.ts`; fail verify when generated output is untracked; bundled-schema policy rejects stray `*.schema.json`; delegate `check-no-handwritten-model-types.sh` to the shared spec checker; import `JsonValue` from `generated/execution-event.ts` in `client.ts` (not `types.ts`).
-- **Pinned spec revision:** Add **`intentproofSpecCommit`** to root and **`packages/sdk`** **`package.json`**; CI and release check out that SHA (`ref`, `fetch-depth: 0`). **`scripts/check-sdk-spec-pin.sh`** execs **`intentproof-spec/scripts/check-sdk-spec-pins.sh`**. **`npm run ci`** runs the pin check first when **`INTENTPROOF_SPEC_ROOT`** is set. **`scripts/spec-conformance.sh`** resolves sibling **`../intentproof-spec`**, env **`INTENTPROOF_SPEC_ROOT`**, or in-repo **`./intentproof-spec`**.
-- **CI and release:** Concurrency cancels superseded runs on the same PR/ref. **`hardening`** job and release preflight require **`hardening`**, **`intentproof-spec`**, **`sdk (22)`**, **`sdk (24)`**. Conformance job sets **`INTENTPROOF_SDK_*`** metadata, uploads **`intentproof-spec/conformance-report.json`** as **`conformance-report-node`** via **`actions/upload-artifact@v7`**. Release checks out pinned spec, sets **`INTENTPROOF_SPEC_ROOT`**, then **`npm run ci`**. **`sdk`** matrix drops the duplicate handwritten step (check stays inside **`npm run ci`**).
-- **Docs:** **[`CONTRIBUTING.md`](CONTRIBUTING.md)** and README cross-links for shared **`intentproof-spec`** terminology (**`INTENTPROOF_SPEC_ROOT`**, **`intentproofSpecCommit`**).
+- None yet.
+
+## 0.1.3 — 2026-05-06
+
+- **Spec pinning + parity hardening:** add and enforce
+  `intentproofSpecCommit`/`intentproofSpecVersion` in root and package manifests;
+  delegate pin checks to the spec repo; require pinned spec checkout in CI and
+  release.
+- **Generated artifact governance:** add `spec_fingerprint.json` generation and
+  coverage; fail generated-type verification on untracked output; enforce no
+  bundled schemas and no handwritten wire model types through shared guards.
+- **CI/release improvements:** tighten required check sets, remove duplicate
+  handwritten-model checks from matrix jobs, and upload conformance report
+  artifacts with standardized SDK metadata.
+- **Parity bootstrap fix:** run `npm ci` inside
+  `scripts/verify-generated-types.sh` so parity codegen/format checks have all
+  dependencies in clean runners.
+- **Docs:** refresh README/CONTRIBUTING terminology cross-links for spec-root and
+  pinning conventions.
 ## 0.1.2 — 2026-05-04
 
 - Add **`CHANGELOG.md`** (this file).
