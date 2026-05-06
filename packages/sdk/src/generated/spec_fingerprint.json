@@ -1,5 +1,5 @@
 {
-  "specVersion": "spec-v1.0.0",
+  "specVersion": "spec-v1.0.1",
   "algorithm": "sha256",
   "generator": {
     "name": "json-schema-to-typescript",
