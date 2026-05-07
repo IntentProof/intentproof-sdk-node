@@ -1,7 +1,7 @@
 {
   "name": "intentproof-sdk-node",
-  "intentproofSpecVersion": "spec-v1.0.1",
-  "intentproofSpecCommit": "74ea3a23ea80dbe6549338d0612b543a26ebbaf1",
+  "intentproofSpecVersion": "spec-v2.0.0",
+  "intentproofSpecCommit": "dd6369f3de1ac69027087b8bcc6ac18c641f1947",
   "private": true,
   "repository": {
     "type": "git",
