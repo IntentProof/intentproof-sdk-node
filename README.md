@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/IntentProof/intentproof-sdk-node/actions/workflows/ci.yml/badge.svg)](https://github.com/IntentProof/intentproof-sdk-node/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@intentproof/sdk)](https://www.npmjs.com/package/@intentproof/sdk)
-[![GitHub release](https://img.shields.io/github/v/release/IntentProof/intentproof-sdk-node)](https://github.com/IntentProof/intentproof-sdk-node/releases)
 
 **IntentProof** is **auditable execution records** for actions that must be defensible—**intent** tied to what actually ran.
 
@@ -49,7 +48,8 @@ Ordinary telemetry shows that *something ran*. It rarely ships an **auditable st
 
 - [npm — `@intentproof/sdk`](https://www.npmjs.com/package/@intentproof/sdk)
 - [GitHub Releases — IntentProof Node SDK](https://github.com/IntentProof/intentproof-sdk-node/releases)
-- [CI artifacts (conformance report + certificate)](https://github.com/IntentProof/intentproof-sdk-node/actions/workflows/ci.yml)
+- [Latest conformance certificate (repo file)](./artifacts/conformance-certificate.latest.json)
+- [Latest conformance report (repo file)](./artifacts/conformance-report.latest.json)
 
 Pin the **version** you want from npm or from GitHub Releases. Replace **`x.y.z`** below with that version.
 
@@ -389,7 +389,7 @@ Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[In
 - **Version pin:** **`intentproofSpecVersion`** and **`intentproofSpecCommit`** in the root **`package.json`** and **`packages/sdk/package.json`** match **`spec.json`** and the spec **`HEAD`** checkout; **`scripts/check-sdk-spec-pin.sh`** enforces this before conformance.
 
 - **CI:** every push/PR checks out this SDK plus **`intentproof-spec`** and runs **`scripts/spec-conformance.sh`** (pin check + full oracle; see `.github/workflows/ci.yml`). The **`sdk`** job sets **`INTENTPROOF_SPEC_ROOT`** so **`packages/sdk`** Vitest also imports the spec **`sdk_test_harness`**—golden **`execution_event_cases.jsonl`** oracle plus a **`MemoryExporter`** **`validateExecutionEvent`** smoke (`spec_conformance.integration.test.ts`).
-- **Conformance certificate artifact:** the **`intentproof-spec`** job uploads **`conformance-certificate-node`** (plus **`conformance-report-node`**) in each CI run so certificates are directly visible from the workflow run page.
+- **Conformance certificate artifact:** the **`intentproof-spec`** job uploads **`conformance-certificate-node`** (plus **`conformance-report-node`**) in each CI run and publishes latest snapshots into tracked repo files under **`artifacts/`** on trusted pushes.
 - **Local:** clone `intentproof-spec` **next to** this repository (`../intentproof-spec`), then:
 
   ```bash
