@@ -70,7 +70,8 @@ export function runWithCorrelationId<T>(correlationId: string, fn: () => T): T {
 }
 
 function defaultOnExporterError(error: unknown, _event: ExecutionEvent): void {
-  console.error("[intentproof] exporter error", error);
+  const message = error instanceof Error ? error.message : String(error);
+  console.error("[intentproof] exporter error", message);
 }
 
 function toErrorSnapshot(e: unknown, includeStack: boolean): ExecutionErrorSnapshot {

@@ -479,7 +479,7 @@ describe("sdk: wrap, capture policy, and dispatch", () => {
     }).wrap({ intent: "x", action: "math.add" }, () => 1)();
     expect(spy).toHaveBeenCalledWith(
       "[intentproof] exporter error",
-      expect.objectContaining({ message: "boom" }),
+      "boom",
     );
     spy.mockRestore();
   });

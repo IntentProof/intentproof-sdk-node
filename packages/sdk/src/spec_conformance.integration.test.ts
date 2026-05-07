@@ -20,7 +20,7 @@ function resolveSpecRoot(): string | null {
   const here = fileURLToPath(new URL(".", import.meta.url));
   // packages/sdk/src -> …/intentproof-sdk-node (three levels up)
   const workspaceRoot = path.resolve(here, "../../..");
-  const sibling = path.join(workspaceRoot, "intentproof-spec");
+  const sibling = path.join(workspaceRoot, "../intentproof-spec");
   if (existsSync(path.join(sibling, "spec.json"))) {
     return sibling;
   }
