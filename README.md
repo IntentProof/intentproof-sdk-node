@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/IntentProof/intentproof-sdk-node/actions/workflows/ci.yml/badge.svg)](https://github.com/IntentProof/intentproof-sdk-node/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@intentproof/sdk)](https://www.npmjs.com/package/@intentproof/sdk)
+<a href="https://github.com/IntentProof/intentproof-sdk-node/raw/main/conformance-certificate.json" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/conformance_certificate-view-0366d6" alt="Conformance Certificate" /></a>
 
 **IntentProof** is **auditable execution records** for actions that must be defensible—**intent** tied to what actually ran.
 
@@ -46,12 +47,7 @@ Ordinary telemetry shows that *something ran*. It rarely ships an **auditable st
 
 **Package:** `@intentproof/sdk`.
 
-- [npm — `@intentproof/sdk`](https://www.npmjs.com/package/@intentproof/sdk)
-- [GitHub Releases — IntentProof Node SDK](https://github.com/IntentProof/intentproof-sdk-node/releases)
-- [Latest conformance certificate (repo file)](./artifacts/conformance-certificate.latest.json)
-- [Latest conformance report (repo file)](./artifacts/conformance-report.latest.json)
-
-Pin the **version** you want from npm or from GitHub Releases. Replace **`x.y.z`** below with that version.
+Replace **`x.y.z`** with the package version you intend to pin.
 
 ```bash
 npm install @intentproof/sdk@x.y.z
@@ -344,7 +340,7 @@ try {
 
 ### 3 — Proof delivery over HTTP (same **`ExecutionEvent`** shape)
 
-**`HttpExporter`** POSTs the same **`ExecutionEvent`** your verifiers see in memory—here alongside **`MemoryExporter`** so tests can assert the wire without a real collector. The request omits ambient credentials; the body is **`{ "intentproof": "1", "event": … }`** (see exporter implementation). For authenticated collectors, pass **`headers`** (e.g. **`Authorization`**, API keys) — see [Security](#security).
+**`HttpExporter`** POSTs the same **`ExecutionEvent`** your verifiers see in memory—here alongside **`MemoryExporter`** so tests can assert the wire without a real collector. The request omits ambient credentials; the body is **`{ "intentproof": "1", "event": … }`** (see exporter implementation). For authenticated collectors, pass **`headers`** (e.g. **`Authorization`**, API keys) — see the Security section above.
 
 ```ts
 const runProbe = client.wrap({ intent: "HTTP test", action: "test.http" }, () => 42);
@@ -365,7 +361,7 @@ runProbe();
 
 ## Security
 
-For **vulnerability reporting**, use this repository’s [**Security**](https://github.com/IntentProof/intentproof-sdk-node/security) tab (private advisories).
+For **vulnerability reporting**, use this repository’s Security tab (private advisories).
 
 Every **`ExecutionEvent`** you emit is data you may ship off-process. Treat them like audit-grade execution records: they can include PII, secrets, stack traces, and business identifiers depending on your **`snapshot`** / **`capture*`** hooks.
 
@@ -382,14 +378,14 @@ Custom **`body`** serializers: if **`body(event)`** throws, **`HttpExporter`** n
 
 ## Canonical specification (`intentproof-spec`)
 
-**Shared pins and terminology** (`INTENTPROOF_SPEC_ROOT`, **`intentproofSpecCommit`**, script names): **[`intentproof-spec` CONTRIBUTING — Terminology](https://github.com/IntentProof/intentproof-spec/blob/main/CONTRIBUTING.md#terminology-shared-with-sdk-repos)**.
+**Shared pins and terminology** (`INTENTPROOF_SPEC_ROOT`, **`intentproofSpecCommit`**, script names) are documented in the **`intentproof-spec`** repository (`CONTRIBUTING.md`, Terminology).
 
-Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[IntentProof specification repository (`intentproof-spec`)](https://github.com/IntentProof/intentproof-spec)**.
+Schemas, golden oracles, and the **Vitest conformance oracle** live in the **`intentproof-spec`** repository.
 
 - **Version pin:** **`intentproofSpecVersion`** and **`intentproofSpecCommit`** in the root **`package.json`** and **`packages/sdk/package.json`** match **`spec.json`** and the spec **`HEAD`** checkout; **`scripts/check-sdk-spec-pin.sh`** enforces this before conformance.
 
 - **CI:** every push/PR checks out this SDK plus **`intentproof-spec`** and runs **`scripts/spec-conformance.sh`** (pin check + full oracle; see `.github/workflows/ci.yml`). The **`sdk`** job sets **`INTENTPROOF_SPEC_ROOT`** so **`packages/sdk`** Vitest also imports the spec **`sdk_test_harness`**—golden **`execution_event_cases.jsonl`** oracle plus a **`MemoryExporter`** **`validateExecutionEvent`** smoke (`spec_conformance.integration.test.ts`).
-- **Conformance certificate artifact:** the **`intentproof-spec`** job uploads **`conformance-certificate-node`** (plus **`conformance-report-node`**) in each CI run and publishes latest snapshots into tracked repo files under **`artifacts/`** on trusted pushes.
+- **Conformance certificate and report:** CI uploads workflow artifacts for each run and, on trusted pushes to the default branch, commits **`conformance-certificate.json`** and **`conformance-report.json`** at this repository root so they stay inspectable on every revision (including before and after spec adoption bumps).
 - **Local:** clone `intentproof-spec` **next to** this repository (`../intentproof-spec`), then:
 
   ```bash
@@ -410,9 +406,9 @@ Schemas, golden oracles, and the **Vitest conformance oracle** live in the **[In
 
 ## Project development
 
-Contributing and shared **`intentproof-spec`** terminology: **[`CONTRIBUTING.md`](CONTRIBUTING.md)**.
+Contributing and shared **`intentproof-spec`** terminology: see **`CONTRIBUTING.md`**.
 
-Layout: **npm workspace** (`package.json` **`workspaces`**, publishable package [`packages/sdk`](packages/sdk)). Requires **Node.js** 22 or newer (see `.nvmrc` and workspace **`engines`**). Release history: [`CHANGELOG.md`](CHANGELOG.md).
+Layout: **npm workspace** (`package.json` **`workspaces`**, publishable package **`packages/sdk`**). Requires **Node.js** 22 or newer (see `.nvmrc` and workspace **`engines`**). Release history: **`CHANGELOG.md`**.
 
 ```bash
 npm ci
@@ -421,4 +417,4 @@ npm run ci
 
 ## License
 
-Apache-2.0 (see `LICENSE` at the repository root and in the published npm package when released).
+Apache-2.0 (see **`LICENSE`** at the repository root).
