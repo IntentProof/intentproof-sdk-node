@@ -6,11 +6,17 @@ All notable changes to this repository are documented here. The publishable pack
 
 ## Unreleased
 
-- **CI artifacts:** upload conformance certificate artifacts
-  (`conformance-certificate-node`) alongside conformance reports so attestation
-  outputs are directly visible from workflow runs.
-- **README visibility:** add CI/package/release badges and document where to
-  find conformance report/certificate artifacts in CI.
+- None yet.
+
+## 0.1.4 — 2026-05-08
+
+- **Conformance CI hardening:** keep canonical spec checks green when branch
+  protection blocks repository push-back, while still uploading report and
+  certificate artifacts for every run.
+- **Spec pin adoption + docs:** pin to `spec-v2.0.1` and align README guidance
+  around conformance artifacts and spec-root workflow details.
+- **Package metadata polish:** use canonical git repository URL metadata in root
+  and package manifests to satisfy publint/release quality checks.
 
 ## 0.1.3 — 2026-05-06
 
