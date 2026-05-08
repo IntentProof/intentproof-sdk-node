@@ -10,11 +10,15 @@ All notable changes to this repository are documented here. The publishable pack
 
 ## 0.1.4 — 2026-05-08
 
-- **Conformance CI hardening:** keep canonical spec checks green when branch
-  protection blocks repository push-back, while still uploading report and
-  certificate artifacts for every run.
-- **Spec pin adoption + docs:** pin to `spec-v2.0.1` and align README guidance
-  around conformance artifacts and spec-root workflow details.
+- **Conformance pipeline hardening:** pin to `spec-v2.0.1`, keep canonical
+  conformance checks green under branch protection, and continue publishing
+  report/certificate artifacts on each run.
+- **Cert-bot loop prevention:** skip conformance push-back on bot-authored
+  follow-up commits and ignore conformance-only root JSON updates on `push` so
+  release/main branches do not churn or repeatedly re-enter CI publish flow.
+- **CI/documentation cleanup:** tighten workflow token permissions, simplify
+  publish gating, and refresh README guidance to match current spec-pinned
+  conformance behavior.
 - **Package metadata polish:** use canonical git repository URL metadata in root
   and package manifests to satisfy publint/release quality checks.
 
