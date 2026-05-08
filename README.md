@@ -380,12 +380,12 @@ Custom **`body`** serializers: if **`body(event)`** throws, **`HttpExporter`** n
 
 **Shared pins and terminology** (`INTENTPROOF_SPEC_ROOT`, **`intentproofSpecCommit`**, script names) are documented in the **`intentproof-spec`** repository (`CONTRIBUTING.md`, Terminology).
 
-Schemas, golden oracles, and the **Vitest conformance oracle** live in the **`intentproof-spec`** repository.
+**`intentproof-spec`** holds normative schemas, golden **`execution_event_cases.jsonl`**, and the canonical **`spec-conformance.sh`** toolchain (Vitest/Jest-style harness code used by the spec lives there too).
 
 - **Version pin:** **`intentproofSpecVersion`** and **`intentproofSpecCommit`** in the root **`package.json`** and **`packages/sdk/package.json`** match **`spec.json`** and the spec **`HEAD`** checkout; **`scripts/check-sdk-spec-pin.sh`** enforces this before conformance.
 
-- **CI:** every push/PR checks out this SDK plus **`intentproof-spec`** and runs **`scripts/spec-conformance.sh`** (pin check + full oracle; see `.github/workflows/ci.yml`). The **`sdk`** job sets **`INTENTPROOF_SPEC_ROOT`** so **`packages/sdk`** Vitest also imports the spec **`sdk_test_harness`**—golden **`execution_event_cases.jsonl`** oracle plus a **`MemoryExporter`** **`validateExecutionEvent`** smoke (`spec_conformance.integration.test.ts`).
-- **Conformance certificate and report:** CI uploads workflow artifacts for each run and, on trusted pushes to the default branch, commits **`conformance-certificate.json`** and **`conformance-report.json`** at this repository root so they stay inspectable on every revision (including before and after spec adoption bumps).
+- **CI:** every push/PR checks out this SDK plus **`intentproof-spec`** and runs **`scripts/spec-conformance.sh`** (pin check + full oracle; see `.github/workflows/ci.yml`). The **`sdk`** job sets **`INTENTPROOF_SPEC_ROOT`** so **`packages/sdk`** Vitest imports the spec **`sdk_test_harness`**—golden **`execution_event_cases.jsonl`** plus **`MemoryExporter`** **`validateExecutionEvent`** smoke (`spec_conformance.integration.test.ts`).
+- **Repo-root certificates:** each run uploads **`conformance-report.json`** and **`conformance-certificate.json`** as workflow artifacts; after a green default-branch push, the conformance GitHub App commits the same files at the repo root when they differ from **`main`**.
 - **Local:** clone `intentproof-spec` **next to** this repository (`../intentproof-spec`), then:
 
   ```bash
