@@ -6,7 +6,7 @@ All notable changes to this repository are documented here. The publishable pack
 
 ## Unreleased
 
-- None yet.
+- **CI / attestation alignment:** split canonical conformance out of **`ci.yml`** into **`spec-conformance.yml`** (PR + manual) and **`conformance-attestation.yml`** (trusted **`main`** signing + validation + root publish), matching the **`intentproof-api`** workflow layout.
 
 ## 0.1.4 — 2026-05-08
 
