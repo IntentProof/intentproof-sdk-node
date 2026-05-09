@@ -1,7 +1,7 @@
 {
   "certificateVersion": "cert-v0.1.0",
   "issuer": "intentproof-ci",
-  "issuedAt": "2026-05-09T14:00:25.988Z",
+  "issuedAt": "2026-05-09T14:01:15.934Z",
   "subject": {
     "name": "intentproof-sdk-node",
     "language": "typescript",
@@ -12,7 +12,7 @@
     "specFingerprint": "efaf4db5b5545d9f037d4ce7d2208a7aed7062e9ac417b3fa79ec2adc8bef165",
     "specCommit": "5b4e5e35e5fe7e087f2feb10f20f2c1f96010f13"
   },
-  "conformanceReportDigest": "5efc7fc3ac15fca935451d729b4a3a64dff2f17aa955660ccbdbcfaaea17b2c2",
+  "conformanceReportDigest": "8a6e087117bdeeb45327840ac646aedd14cb1065f6f63292cd05635c34fd591c",
   "claims": {
     "oracle": "intentproof-spec/run-conformance",
     "allPhasesPass": true
@@ -20,6 +20,6 @@
   "signature": {
     "alg": "ed25519",
     "keyId": "intentproof-ci-ed25519-v1",
-    "value": "Wg3pHP79JUFF07/2EZjP5JaGf7+4iplsidNewL59Z/qizJVQS46Va1m3b45T7XW74GJetA9BJtX5Ad75AnuPDg=="
+    "value": "lTL91bOuqaJO0rAL6FbJ1ERQ4M5IKKomfVss8Virt+y6sLd+jJPi6zW86cFgR8cQI4pPPAIXRSxHrR56NB4LDA=="
   }
 }
