@@ -1,7 +1,7 @@
 {
   "certificateVersion": "cert-v0.1.0",
   "issuer": "intentproof-ci",
-  "issuedAt": "2026-05-09T14:08:38.637Z",
+  "issuedAt": "2026-05-09T14:09:29.816Z",
   "subject": {
     "name": "intentproof-sdk-node",
     "language": "typescript",
@@ -12,7 +12,7 @@
     "specFingerprint": "efaf4db5b5545d9f037d4ce7d2208a7aed7062e9ac417b3fa79ec2adc8bef165",
     "specCommit": "5b4e5e35e5fe7e087f2feb10f20f2c1f96010f13"
   },
-  "conformanceReportDigest": "a4230257c42156b9b21c12bcea1f5c609213e91d928e553cfb0e6472217ea901",
+  "conformanceReportDigest": "8c972301046409cc375a8ad83955a5cdc7ac3d71882519c6045c10439252278f",
   "claims": {
     "oracle": "intentproof-spec/run-conformance",
     "allPhasesPass": true
@@ -20,6 +20,6 @@
   "signature": {
     "alg": "ed25519",
     "keyId": "intentproof-ci-ed25519-v1",
-    "value": "HSDKleq39109zvBCd5vtywjLRPAaUuR4ICwh4MuxWVpIZycsvBM7jpXzQDbOVg8pBcwMLV6ObPjQ2mV6uaHgCw=="
+    "value": "jEvVSaS+KeS1nVjkj4nYA9LQg6KNCMsWRH+BZeeU40rc2VyKgjVnoeYvo4fnd+pq2389lETv979mDVPNtv2rBQ=="
   }
 }
