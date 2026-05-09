@@ -384,8 +384,9 @@ Custom **`body`** serializers: if **`body(event)`** throws, **`HttpExporter`** n
 
 - **Version pin:** **`intentproofSpecVersion`** and **`intentproofSpecCommit`** in the root **`package.json`** and **`packages/sdk/package.json`** match **`spec.json`** and the spec **`HEAD`** checkout; **`scripts/check-consumer-spec-pin.sh`** delegates to **`intentproof-spec`** **`scripts/check-consumer-spec-pins.sh`** before conformance.
 
-- **CI:** every push/PR checks out this SDK plus **`intentproof-spec`** and runs **`scripts/spec-conformance.sh`** (pin check + full oracle; see `.github/workflows/ci.yml`). The **`sdk`** job sets **`INTENTPROOF_SPEC_ROOT`** so **`packages/sdk`** Vitest imports the spec **`sdk_test_harness`**—golden **`execution_event_cases.jsonl`** plus **`MemoryExporter`** **`validateExecutionEvent`** smoke (`spec_conformance.integration.test.ts`).
-- **Repo-root certificates:** each run uploads **`conformance-report.json`** and **`conformance-certificate.json`** as workflow artifacts; after a green default-branch push, the conformance GitHub App commits the same files at the repo root when they differ from **`main`**.
+- **CI:** `.github/workflows/ci.yml` runs hardening plus the **`sdk`** matrix (Node 22/24) against a pinned **`intentproof-spec`** checkout; **`INTENTPROOF_SPEC_ROOT`** enables Vitest **`sdk_test_harness`** coverage (`spec_conformance.integration.test.ts`).
+- **Spec conformance (PR):** `.github/workflows/spec-conformance.yml` runs **`npm run ci`** then **`scripts/spec-conformance.sh`** and uploads a **`conformance-report.json`** artifact (committed spec public key path; no signing secrets on PRs).
+- **Trusted attestation (`main`):** `.github/workflows/conformance-attestation.yml` follows the **`intentproof-api`** pattern: full **`npm run ci`**, signed oracle output, **`npm run validate:conformance-certificate`** in the spec checkout, combined **`conformance-artifacts`** upload, and cert-bot publish of root **`conformance-certificate.json`** / **`conformance-report.json`** when they change.
 - **Local:** clone `intentproof-spec` **next to** this repository (`../intentproof-spec`), then:
 
   ```bash
