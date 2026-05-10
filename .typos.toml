@@ -1,0 +1,13 @@
+# Typos — https://github.com/crate-ci/typos
+# CI: .github/workflows/typos.yml
+
+[files]
+extend-exclude = ["package-lock.json", "packages/sdk/dist/**"]
+
+[default.extend-identifiers]
+# Serialize options handle (abbrev. for “serialize”); not “set”.
+serOpts = "serOpts"
+
+[default.extend-words]
+# Placeholder Stripe-style IDs contain “SAMPLE”; tokenizer can flag “SAMPL”.
+SAMPL = "SAMPL"
