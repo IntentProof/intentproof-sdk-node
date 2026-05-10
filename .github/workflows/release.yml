@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Verify required CI checks passed on release SHA
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const required = ["hardening", "intentproof-spec", "sdk (22)", "sdk (24)"];
