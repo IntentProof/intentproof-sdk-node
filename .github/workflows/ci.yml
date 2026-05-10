@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # was `@v6`
 
       - name: Resolve pinned intentproof-spec revision
         id: spec_pin
@@ -31,14 +31,14 @@ jobs:
           SHA="$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).intentproofSpecCommit")"
           echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # was `@v6`
         with:
           repository: IntentProof/intentproof-spec
           ref: ${{ steps.spec_pin.outputs.sha }}
           fetch-depth: 0
           path: intentproof-spec
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # was `@v6`
         with:
           node-version-file: intentproof-spec/.nvmrc
           cache: npm
@@ -61,7 +61,7 @@ jobs:
         node-version: ["22", "24"]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # was `@v6`
 
       - name: Resolve pinned intentproof-spec revision
         id: spec_pin
@@ -70,7 +70,7 @@ jobs:
           SHA="$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).intentproofSpecCommit")"
           echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # was `@v6`
         with:
           repository: IntentProof/intentproof-spec
           ref: ${{ steps.spec_pin.outputs.sha }}
@@ -78,7 +78,7 @@ jobs:
           path: intentproof-spec
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # was `@v6`
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
@@ -103,7 +103,7 @@ jobs:
 
       - name: Upload coverage (lcov)
         if: matrix.node-version == '22'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # was `@v7`
         with:
           name: coverage-lcov
           path: packages/sdk/coverage/lcov.info
