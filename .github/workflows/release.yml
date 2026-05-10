@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Verify required CI checks passed on release SHA
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # was `@v9`
         with:
           script: |
             const required = ["hardening", "intentproof-spec", "sdk (22)", "sdk (24)"];
@@ -54,7 +54,7 @@ jobs:
         working-directory: packages/sdk
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # was `@v6`
 
       - name: Resolve pinned intentproof-spec revision
         id: spec_pin
@@ -63,7 +63,7 @@ jobs:
           SHA="$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).intentproofSpecCommit")"
           echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # was `@v6`
         with:
           repository: IntentProof/intentproof-spec
           ref: ${{ steps.spec_pin.outputs.sha }}
@@ -81,7 +81,7 @@ jobs:
           fi
 
       - name: Use Node.js 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # was `@v6`
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
