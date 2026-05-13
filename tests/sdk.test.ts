@@ -1,26 +1,185 @@
-import { wrap, runWithCorrelationId, configure, getOutbox } from '../src/index';
+import { describe, it, beforeEach, afterEach } from 'node:test';
+import * as assert from 'node:assert';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import {
+  configure,
+  wrap,
+  runWithCorrelationId,
+  getOutbox,
+  getInstanceId,
+  getPublicKey,
+} from '../src/index';
 
-configure({ dbPath: './test.db' });
+describe('SDK', () => {
+  let tmpDir: string;
+  let dbPath: string;
+  let dataDir: string;
 
-async function main() {
-    const refund = wrap(
-        { intent: "Return funds", action: "payments.refund" },
-        async (amount: number) => ({ id: "ref_123", amount })
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-test-'));
+    dbPath = path.join(tmpDir, 'test.db');
+    dataDir = path.join(tmpDir, 'data');
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('persists keypair across configure calls', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const id1 = getInstanceId();
+    const pub1 = await getPublicKey();
+
+    // Simulate restart: re-configure with same dataDir.
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const id2 = getInstanceId();
+    const pub2 = await getPublicKey();
+
+    assert.strictEqual(id1, id2, 'instance_id must be stable across restarts');
+    assert.deepStrictEqual(pub1, pub2, 'public key must be stable across restarts');
+  });
+
+  it('generates a new keypair for a fresh dataDir', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const id1 = getInstanceId();
+
+    const freshDir = path.join(tmpDir, 'fresh');
+    configure({ dbPath, dataDir: freshDir, tenantId: 'tnt_a' });
+    const id2 = getInstanceId();
+
+    assert.notStrictEqual(id1, id2, 'different dataDir must yield different instance_id');
+  });
+
+  it('produces a signed event with correct prev_event_hash', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Test', action: 'test.action' },
+      async (x: number) => x * 2
     );
 
-    await runWithCorrelationId("test-123", async () => {
-        await refund(4999);
+    await runWithCorrelationId('corr-1', async () => {
+      await fn(5);
     });
 
-    const events = await getOutbox().getEvents();
-    console.log("EVENTS IN OUTBOX:", events.length);
-    if (events.length > 0 && events[0].signature) {
-        console.log("Event is signed:", events[0].signature.value !== undefined);
-        console.log("Event payload:", JSON.stringify(events[0], null, 2));
-    }
-}
+    const events = getOutbox().getEvents();
+    assert.strictEqual(events.length, 1, 'one event should be stored');
 
-// Ensure the table is created before inserting
-setTimeout(() => {
-    main().catch(console.error);
-}, 100);
+    const ev = events[0];
+    assert.strictEqual(ev.chain_position, 1, 'first event has chain_position 1');
+    assert.strictEqual(
+      ev.prev_event_hash,
+      'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+      'first event prev_hash is sentinel'
+    );
+    assert.ok(ev.signature, 'event must have a signature');
+    assert.strictEqual(ev.signature.alg, 'ed25519');
+    assert.ok(ev.signature.value, 'signature value must be present');
+  });
+
+  it('maintains chain continuity across restarts', async () => {
+    // First session: produce one event.
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Test', action: 'test.action' },
+      async (x: number) => x * 2
+    );
+
+    await runWithCorrelationId('corr-2', async () => {
+      await fn(1);
+    });
+
+    const ev1 = getOutbox().getEvents()[0];
+    assert.strictEqual(ev1.chain_position, 1);
+
+    // Simulate restart.
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn2 = wrap(
+      { intent: 'Test', action: 'test.action' },
+      async (x: number) => x * 2
+    );
+
+    await runWithCorrelationId('corr-2', async () => {
+      await fn2(2);
+    });
+
+    const events = getOutbox().getEvents();
+    assert.strictEqual(events.length, 2, 'two events total');
+
+    const ev2 = events[1];
+    assert.strictEqual(ev2.chain_position, 2, 'second event has chain_position 2');
+    assert.ok(
+      ev2.prev_event_hash.startsWith('sha256:'),
+      'prev_event_hash must be a sha256 hash'
+    );
+    assert.notStrictEqual(
+      ev2.prev_event_hash,
+      'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+      'second event must reference first event hash, not sentinel'
+    );
+  });
+
+  it('preserves correlation isolation', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Test', action: 'test.action' },
+      async (x: number) => x * 2
+    );
+
+    await runWithCorrelationId('corr-a', async () => {
+      await fn(1);
+    });
+    await runWithCorrelationId('corr-b', async () => {
+      await fn(2);
+    });
+
+    const events = getOutbox().getEvents();
+    assert.strictEqual(events.length, 2);
+
+    const evA = events.find((e: any) => e.correlation_id === 'corr-a');
+    const evB = events.find((e: any) => e.correlation_id === 'corr-b');
+
+    assert.ok(evA, 'event for corr-a exists');
+    assert.ok(evB, 'event for corr-b exists');
+    assert.strictEqual(evA.chain_position, 1);
+    assert.strictEqual(evB.chain_position, 1);
+    assert.strictEqual(
+      evA.prev_event_hash,
+      'sha256:0000000000000000000000000000000000000000000000000000000000000000'
+    );
+    assert.strictEqual(
+      evB.prev_event_hash,
+      'sha256:0000000000000000000000000000000000000000000000000000000000000000'
+    );
+  });
+
+  it('produces a verifiable Ed25519 signature', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Test', action: 'test.action' },
+      async (x: number) => x * 2
+    );
+
+    await runWithCorrelationId('corr-verify', async () => {
+      await fn(7);
+    });
+
+    const events = getOutbox().getEvents();
+    const ev = events.find((e: any) => e.correlation_id === 'corr-verify');
+    assert.ok(ev, 'event exists');
+
+    // Verify the signature cryptographically.
+    const { canonicalize } = require('json-canonicalize');
+    const evCopy = { ...ev };
+    delete evCopy.signature;
+    const canonicalBytes = new TextEncoder().encode(canonicalize(evCopy));
+    const hash = await crypto.subtle.digest('SHA-256', canonicalBytes);
+
+    const pub = await getPublicKey();
+    const sig = Buffer.from(ev.signature.value, 'base64');
+    const ed = require('@noble/ed25519');
+    const valid = await ed.verifyAsync(sig, new Uint8Array(hash), pub);
+    assert.strictEqual(valid, true, 'signature must verify against public key');
+  });
+});
