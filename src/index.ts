@@ -33,6 +33,7 @@ function loadOrCreateKeypair(dir: string): Keypair {
   const keyPath = path.join(dir, 'keypair.json');
   if (fs.existsSync(keyPath)) {
     const raw = fs.readFileSync(keyPath, 'utf-8');
+    fs.chmodSync(keyPath, 0o600);
     return JSON.parse(raw) as Keypair;
   }
   const privateKey = require('crypto').randomBytes(32);
@@ -40,7 +41,7 @@ function loadOrCreateKeypair(dir: string): Keypair {
     privateKey: Buffer.from(privateKey).toString('base64'),
     instanceId: 'inst_' + ulid(),
   };
-  fs.writeFileSync(keyPath, JSON.stringify(kp, null, 2));
+  fs.writeFileSync(keyPath, JSON.stringify(kp, null, 2), { mode: 0o600 });
   return kp;
 }
 
@@ -146,9 +147,15 @@ export function getOutbox() {
 }
 
 export function getInstanceId() {
+  if (!instanceId) {
+    throw new Error('SDK not configured: call configure() before getInstanceId()');
+  }
   return instanceId;
 }
 
 export function getPublicKey(): Promise<Uint8Array> {
+  if (!instancePrivateKey) {
+    return Promise.reject(new Error('SDK not configured: call configure() before getPublicKey()'));
+  }
   return ed.getPublicKeyAsync(instancePrivateKey);
 }

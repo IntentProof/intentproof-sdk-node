@@ -107,7 +107,8 @@ describe('SDK', () => {
     const events = getOutbox().getEvents();
     assert.strictEqual(events.length, 2, 'two events total');
 
-    const ev2 = events[1];
+    const ev2 = events.find((e: any) => e.chain_position === 2);
+    assert.ok(ev2, 'event with chain_position 2 must exist');
     assert.strictEqual(ev2.chain_position, 2, 'second event has chain_position 2');
     assert.ok(
       ev2.prev_event_hash.startsWith('sha256:'),

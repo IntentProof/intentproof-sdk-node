@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "node --test tests/*.test.ts"
+    "test": "node -r ts-node/register --test tests/*.test.ts"
   },
   "keywords": [],
   "author": "",
