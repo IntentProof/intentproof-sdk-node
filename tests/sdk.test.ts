@@ -171,10 +171,10 @@ describe('SDK', () => {
     assert.ok(ev, 'event exists');
 
     // Verify the signature cryptographically.
-    const { canonicalize } = require('json-canonicalize');
+    const { canonicalizeIntentProof } = require('../src/canon');
     const evCopy = { ...ev };
     delete evCopy.signature;
-    const canonicalBytes = new TextEncoder().encode(canonicalize(evCopy));
+    const canonicalBytes = new TextEncoder().encode(canonicalizeIntentProof(evCopy));
     const hash = await crypto.subtle.digest('SHA-256', canonicalBytes);
 
     const pub = await getPublicKey();
