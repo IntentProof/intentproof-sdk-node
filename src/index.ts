@@ -1,4 +1,4 @@
-import { canonicalize } from 'json-canonicalize';
+import { canonicalizeIntentProof } from './canon';
 import * as ed from '@noble/ed25519';
 import { ulid } from 'ulid';
 import { AsyncLocalStorage } from 'async_hooks';
@@ -113,7 +113,7 @@ export function wrap<T extends (...args: any[]) => any>(
       sdk_version: 'node@1.0.0',
     };
 
-    const canonicalBytes = new TextEncoder().encode(canonicalize(event));
+    const canonicalBytes = new TextEncoder().encode(canonicalizeIntentProof(event));
     const hash = await crypto.subtle.digest('SHA-256', canonicalBytes);
     const hashHex = Array.from(new Uint8Array(hash))
       .map((b) => b.toString(16).padStart(2, '0'))
