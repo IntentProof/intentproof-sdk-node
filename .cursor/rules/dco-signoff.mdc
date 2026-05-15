@@ -1,0 +1,11 @@
+---
+description: Require DCO sign-off for automated commits
+alwaysApply: true
+---
+
+Cloud/auto-fix agents must include a DCO `Signed-off-by:` trailer on every commit they create.
+
+- Use `git commit -s ...` for new commits.
+- Use `git commit --amend --no-edit -s` when adding the trailer to the latest commit.
+- The sign-off must match the commit author identity.
+- Keep `Signed-off-by:` in the final trailer block with no blank line separating it from other trailers such as `Co-authored-by:`.
