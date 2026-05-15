@@ -3,6 +3,7 @@ import * as ed from '@noble/ed25519';
 import { ulid } from 'ulid';
 import { AsyncLocalStorage } from 'async_hooks';
 import { Outbox } from './outbox';
+import { HttpExporter, resolveIngestURL } from './exporter';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -21,6 +22,7 @@ let instancePrivateKey: Uint8Array;
 let instanceId: string;
 let tenantId: string;
 let outbox: Outbox;
+let exporter: HttpExporter | null = null;
 let dataDir: string;
 
 function ensureDir(dir: string): void {
@@ -45,16 +47,34 @@ function loadOrCreateKeypair(dir: string): Keypair {
   return kp;
 }
 
-export function configure(options: { dbPath: string; tenantId?: string; dataDir?: string }) {
+export function configure(options: {
+  dbPath: string;
+  tenantId?: string;
+  dataDir?: string;
+  ingestUrl?: string;
+}) {
   dataDir = options.dataDir || path.join(require('os').homedir(), '.intentproof', 'sdk-node');
   ensureDir(dataDir);
 
   const kp = loadOrCreateKeypair(dataDir);
   instancePrivateKey = new Uint8Array(Buffer.from(kp.privateKey, 'base64'));
   instanceId = kp.instanceId;
-  tenantId = options.tenantId || 'tnt_default';
+  tenantId =
+    options.tenantId ||
+    process.env.INTENTPROOF_TENANT_ID?.trim() ||
+    'tnt_default';
 
   outbox = new Outbox(options.dbPath);
+
+  const ingestURL = resolveIngestURL(options.ingestUrl);
+  exporter = ingestURL ? new HttpExporter(ingestURL) : null;
+}
+
+/** Wait for in-flight HTTP exports to finish (e.g. before process exit). */
+export async function flush(): Promise<void> {
+  if (exporter) {
+    await exporter.flush();
+  }
 }
 
 export function wrap<T extends (...args: any[]) => any>(
@@ -133,6 +153,9 @@ export function wrap<T extends (...args: any[]) => any>(
     if (outbox) {
       outbox.append(eventId, event);
       outbox.setChainState(correlationId, chainPos, eventHash);
+    }
+    if (exporter) {
+      exporter.enqueue(event);
     }
 
     if (reraise) {
