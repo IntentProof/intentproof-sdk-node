@@ -17,6 +17,10 @@ describe('exporter', () => {
       resolveIngestURL('http://127.0.0.1:9787/v1/events'),
       'http://127.0.0.1:9787/v1/events'
     );
+    assert.strictEqual(
+      resolveIngestURL('http://127.0.0.1:9787/v1/events/'),
+      'http://127.0.0.1:9787/v1/events'
+    );
   });
 
   it('resolveIngestURL uses INTENTPROOF_USE_LOCAL_INGEST', () => {

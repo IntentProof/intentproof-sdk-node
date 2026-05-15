@@ -16,11 +16,11 @@ export function resolveIngestURL(explicit?: string): string | null {
 }
 
 function normalizeIngestURL(raw: string): string {
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().replace(/\/+$/, '');
   if (trimmed.endsWith('/v1/events')) {
     return trimmed;
   }
-  return trimmed.replace(/\/+$/, '') + '/v1/events';
+  return trimmed + '/v1/events';
 }
 
 export class HttpExporter {
