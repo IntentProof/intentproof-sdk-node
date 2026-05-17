@@ -16,6 +16,7 @@ on:
 
 jobs:
   test-package:
+    name: "IntentProof Release: Test npm Package"
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -39,6 +40,7 @@ jobs:
         run: npm pack --dry-run
 
   sign-npm-package:
+    name: "IntentProof Release: Sign npm Package"
     needs: test-package
     permissions:
       contents: write
