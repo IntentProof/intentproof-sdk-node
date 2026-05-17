@@ -14,13 +14,10 @@ on:
         default: refs/heads/main
         type: string
 
-permissions:
-  contents: write
-  id-token: write
-  packages: write
-
 jobs:
   test-package:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -43,6 +40,10 @@ jobs:
 
   sign-npm-package:
     needs: test-package
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
     uses: IntentProof/intentproof-tools/.github/workflows/release-build-sign.yml@317387a9724787e4ac484f39de46d7e559b6c98d
     with:
       artifact_kind: npm
