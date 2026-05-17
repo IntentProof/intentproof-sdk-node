@@ -19,6 +19,31 @@ Node.js SDK for emitting signed `ExecutionEvent` records to IntentProof.
    - or `INTENTPROOF_USE_LOCAL_INGEST=1` for the default local URL
 4. Call `flush()` before process exit to await in-flight exports.
 
+## Local key and data directory
+
+`configure()` requires an outbox database path through `dbPath`. That outbox
+location is application-controlled and is not defaulted by the SDK.
+
+If `configure()` is called without `dataDir`, the SDK stores its local signing
+keypair at `~/.intentproof/sdk-node/keypair.json`. The keypair is reused across
+process restarts so the same local SDK instance can continue signing a stable
+event chain. Delete `~/.intentproof/sdk-node` to reset the default local SDK
+identity.
+
+Pass an explicit `dataDir` to isolate tests, demos, or applications that should
+not use the default `~/.intentproof` tree:
+
+```typescript
+configure({
+  dbPath: './intentproof-outbox.db',
+  dataDir: './.intentproof-sdk',
+});
+```
+
+When `intentproof local` is running, it imports
+`~/.intentproof/sdk-node/keypair.json` if present so locally exported events can
+verify without extra key-registration steps.
+
 ## License
 
 Apache License 2.0 (`LICENSE`).
