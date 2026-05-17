@@ -1,0 +1,53 @@
+name: release signing dry run
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: SemVer version to place in dry-run attestations.
+        required: true
+        default: 0.0.0-dryrun
+        type: string
+      release_ref:
+        description: Git ref to check out for the dry run.
+        required: true
+        default: refs/heads/main
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  packages: write
+
+jobs:
+  test-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ inputs.release_ref }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Check npm package contents
+        run: npm pack --dry-run
+
+  sign-npm-package:
+    needs: test-package
+    uses: IntentProof/intentproof-tools/.github/workflows/release-build-sign.yml@317387a9724787e4ac484f39de46d7e559b6c98d
+    with:
+      artifact_kind: npm
+      subject_name: intentproof-sdk-node
+      release_version: ${{ inputs.release_version }}
+      release_ref: ${{ inputs.release_ref }}
+      npm_package_path: .
+      attest_to_rekor: false
