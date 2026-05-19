@@ -4,7 +4,7 @@ import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { ingestRequestHeaders, resolveIngestURL } from '../src/exporter';
+import { HttpExporter, ingestRequestHeaders, resolveIngestURL } from '../src/exporter';
 import { configure, wrap, runWithCorrelationId, flush } from '../src/index';
 
 describe('exporter', () => {
@@ -23,6 +23,18 @@ describe('exporter', () => {
     );
   });
 
+  it('ingestRequestHeaders omits Authorization when token is unset', () => {
+    const prev = process.env.INTENTPROOF_INGEST_TOKEN;
+    delete process.env.INTENTPROOF_INGEST_TOKEN;
+    try {
+      assert.strictEqual(ingestRequestHeaders().Authorization, undefined);
+    } finally {
+      if (prev !== undefined) {
+        process.env.INTENTPROOF_INGEST_TOKEN = prev;
+      }
+    }
+  });
+
   it('ingestRequestHeaders includes bearer token when configured', () => {
     const prev = process.env.INTENTPROOF_INGEST_TOKEN;
     process.env.INTENTPROOF_INGEST_TOKEN = 'ingest-secret';
@@ -36,6 +48,44 @@ describe('exporter', () => {
         delete process.env.INTENTPROOF_INGEST_TOKEN;
       } else {
         process.env.INTENTPROOF_INGEST_TOKEN = prev;
+      }
+    }
+  });
+
+  it('resolveIngestURL reads INTENTPROOF_INGEST_URL from the environment', () => {
+    const prevURL = process.env.INTENTPROOF_INGEST_URL;
+    process.env.INTENTPROOF_INGEST_URL = 'http://127.0.0.1:9787';
+    try {
+      assert.strictEqual(
+        resolveIngestURL(),
+        'http://127.0.0.1:9787/v1/events'
+      );
+    } finally {
+      if (prevURL === undefined) {
+        delete process.env.INTENTPROOF_INGEST_URL;
+      } else {
+        process.env.INTENTPROOF_INGEST_URL = prevURL;
+      }
+    }
+  });
+
+  it('resolveIngestURL returns null when ingest is not configured', () => {
+    const prevURL = process.env.INTENTPROOF_INGEST_URL;
+    const prevLocal = process.env.INTENTPROOF_USE_LOCAL_INGEST;
+    delete process.env.INTENTPROOF_INGEST_URL;
+    delete process.env.INTENTPROOF_USE_LOCAL_INGEST;
+    try {
+      assert.strictEqual(resolveIngestURL(), null);
+    } finally {
+      if (prevURL === undefined) {
+        delete process.env.INTENTPROOF_INGEST_URL;
+      } else {
+        process.env.INTENTPROOF_INGEST_URL = prevURL;
+      }
+      if (prevLocal === undefined) {
+        delete process.env.INTENTPROOF_USE_LOCAL_INGEST;
+      } else {
+        process.env.INTENTPROOF_USE_LOCAL_INGEST = prevLocal;
       }
     }
   });
@@ -63,9 +113,192 @@ describe('exporter', () => {
       }
     }
   });
+
+  it('accepts HTTP 200 ingest responses', async () => {
+    const okServer = http.createServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/v1/events') {
+        req.resume();
+        res.writeHead(200);
+        res.end();
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+
+    await new Promise<void>((resolve) => {
+      okServer.listen(0, '127.0.0.1', () => resolve());
+    });
+    const addr = okServer.address();
+    if (!addr || typeof addr === 'string') {
+      throw new Error('no server address');
+    }
+
+    try {
+      const exporter = new HttpExporter(`http://127.0.0.1:${addr.port}/v1/events`);
+      exporter.enqueue({ event_id: 'evt_ok' });
+      await exporter.flush();
+    } finally {
+      await new Promise<void>((resolve) => okServer.close(() => resolve()));
+    }
+  });
+
+  it('logs non-2xx ingest responses with an empty body', async () => {
+    const warnings: string[] = [];
+    const prevWarn = console.warn;
+    console.warn = (message?: unknown) => {
+      warnings.push(String(message));
+    };
+
+    const emptyBodyServer = http.createServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/v1/events') {
+        req.resume();
+        res.writeHead(503);
+        res.end();
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+
+    await new Promise<void>((resolve) => {
+      emptyBodyServer.listen(0, '127.0.0.1', () => resolve());
+    });
+    const addr = emptyBodyServer.address();
+    if (!addr || typeof addr === 'string') {
+      throw new Error('no server address');
+    }
+
+    try {
+      const exporter = new HttpExporter(`http://127.0.0.1:${addr.port}/v1/events`);
+      exporter.enqueue({ event_id: 'evt_empty_body' });
+      await exporter.flush();
+      assert.match(warnings.join('\n'), /ingest POST 503/);
+    } finally {
+      console.warn = prevWarn;
+      await new Promise<void>((resolve) => emptyBodyServer.close(() => resolve()));
+    }
+  });
+
+  it('logs non-2xx ingest responses without throwing', async () => {
+    const warnings: string[] = [];
+    const prevWarn = console.warn;
+    console.warn = (message?: unknown) => {
+      warnings.push(String(message));
+    };
+
+    const failingServer = http.createServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/v1/events') {
+        req.resume();
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('boom');
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+
+    await new Promise<void>((resolve) => {
+      failingServer.listen(0, '127.0.0.1', () => resolve());
+    });
+    const addr = failingServer.address();
+    if (!addr || typeof addr === 'string') {
+      throw new Error('no server address');
+    }
+
+    try {
+      const exporter = new HttpExporter(`http://127.0.0.1:${addr.port}/v1/events`);
+      exporter.enqueue({ event_id: 'evt_failure' });
+      await exporter.flush();
+      assert.match(warnings.join('\n'), /ingest POST 500: boom/);
+    } finally {
+      console.warn = prevWarn;
+      await new Promise<void>((resolve) => failingServer.close(() => resolve()));
+    }
+  });
+
+  it('logs network failures from non-Error rejections', async () => {
+    const warnings: string[] = [];
+    const prevWarn = console.warn;
+    const prevFetch = global.fetch;
+    console.warn = (message?: unknown) => {
+      warnings.push(String(message));
+    };
+    global.fetch = (() => Promise.reject('network down')) as typeof fetch;
+
+    try {
+      const exporter = new HttpExporter('http://127.0.0.1:9787/v1/events');
+      exporter.enqueue({ event_id: 'evt_network' });
+      await exporter.flush();
+      assert.match(warnings.join('\n'), /network down/);
+    } finally {
+      console.warn = prevWarn;
+      global.fetch = prevFetch;
+    }
+  });
 });
 
 describe('HTTP export from wrap()', () => {
+  it('flushes prior exporter when configure is called again', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-export-reconfig-'));
+    let flushCount = 0;
+    const prevToken = process.env.INTENTPROOF_INGEST_TOKEN;
+    process.env.INTENTPROOF_INGEST_TOKEN = 'ingest-secret';
+
+    const server = http.createServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/v1/events') {
+        req.resume();
+        res.writeHead(202);
+        res.end();
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+    await new Promise<void>((resolve) => {
+      server.listen(0, '127.0.0.1', () => resolve());
+    });
+    const addr = server.address();
+    if (!addr || typeof addr === 'string') {
+      throw new Error('no server address');
+    }
+    const url = `http://127.0.0.1:${addr.port}/v1/events`;
+
+    try {
+      configure({
+        dbPath: path.join(tmpDir, 'a.db'),
+        dataDir: path.join(tmpDir, 'data-a'),
+        tenantId: 'tnt_test',
+        ingestUrl: url,
+      });
+      const exporter = (
+        require('../src/client') as typeof import('../src/client')
+      ).getExporter();
+      assert.ok(exporter);
+      const originalFlush = exporter!.flush.bind(exporter);
+      exporter!.flush = async () => {
+        flushCount += 1;
+        return originalFlush();
+      };
+
+      configure({
+        dbPath: path.join(tmpDir, 'b.db'),
+        dataDir: path.join(tmpDir, 'data-b'),
+        tenantId: 'tnt_test',
+        ingestUrl: url,
+      });
+      assert.strictEqual(flushCount, 1);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      if (prevToken === undefined) {
+        delete process.env.INTENTPROOF_INGEST_TOKEN;
+      } else {
+        process.env.INTENTPROOF_INGEST_TOKEN = prevToken;
+      }
+    }
+  });
+
   let tmpDir: string;
   let server: http.Server;
   let received: any[];

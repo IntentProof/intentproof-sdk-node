@@ -1,2 +1,5 @@
 node_modules/
 test.db
+dist/
+src/*.js
+tests/*.js

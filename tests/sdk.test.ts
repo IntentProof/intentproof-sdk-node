@@ -10,6 +10,7 @@ import {
   getOutbox,
   getInstanceId,
   getPublicKey,
+  flush,
 } from '../src/index';
 
 describe('SDK', () => {
@@ -25,6 +26,132 @@ describe('SDK', () => {
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('requires configure before reading instance metadata', async () => {
+    const clientPath = require.resolve('../src/client');
+    delete require.cache[clientPath];
+    delete require.cache[require.resolve('../src/index')];
+    const freshClient = require('../src/client') as typeof import('../src/client');
+
+    assert.throws(
+      () => freshClient.getInstanceId(),
+      /SDK not configured: call configure\(\) before getInstanceId\(\)/
+    );
+    await assert.rejects(
+      () => freshClient.getPublicKey(),
+      /SDK not configured: call configure\(\) before getPublicKey\(\)/
+    );
+    assert.throws(
+      () => freshClient.getPrivateKey(),
+      /SDK not configured: call configure\(\) before getPrivateKey\(\)/
+    );
+    assert.throws(
+      () => freshClient.getOutbox(),
+      /SDK not configured: call configure\(\) before getOutbox\(\)/
+    );
+    assert.throws(
+      () => freshClient.getTenantId(),
+      /SDK not configured: call configure\(\) before getTenantId\(\)/
+    );
+  });
+
+  it('creates nested dataDir on first configure', () => {
+    const nestedDir = path.join(tmpDir, 'nested', 'sdk-data');
+    configure({ dbPath, dataDir: nestedDir, tenantId: 'tnt_a' });
+    assert.ok(fs.existsSync(nestedDir));
+    assert.ok(fs.existsSync(path.join(nestedDir, 'keypair.json')));
+  });
+
+  it('defaults tenant id when tenantId and env are unset', async () => {
+    const prevTenant = process.env.INTENTPROOF_TENANT_ID;
+    delete process.env.INTENTPROOF_TENANT_ID;
+    try {
+      configure({ dbPath, dataDir });
+      const fn = wrap(
+        { intent: 'Test', action: 'test.tenant_default' },
+        async (x: number) => x
+      );
+      await runWithCorrelationId('corr-tenant-default', async () => {
+        await fn(1);
+      });
+      assert.strictEqual(getOutbox().getEvents()[0].tenant_id, 'tnt_default');
+    } finally {
+      if (prevTenant === undefined) {
+        delete process.env.INTENTPROOF_TENANT_ID;
+      } else {
+        process.env.INTENTPROOF_TENANT_ID = prevTenant;
+      }
+    }
+  });
+
+  it('loads an existing keypair from disk', () => {
+    const crypto = require('crypto');
+    const kp = {
+      privateKey: Buffer.from(crypto.randomBytes(32)).toString('base64'),
+      instanceId: 'inst_existing',
+    };
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'keypair.json'), JSON.stringify(kp), {
+      mode: 0o600,
+    });
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    assert.strictEqual(getInstanceId(), 'inst_existing');
+  });
+
+  it('uses INTENTPROOF_TENANT_ID when tenantId is omitted', async () => {
+    const prevTenant = process.env.INTENTPROOF_TENANT_ID;
+    process.env.INTENTPROOF_TENANT_ID = 'tnt_from_env';
+    try {
+      configure({ dbPath, dataDir });
+      const fn = wrap(
+        { intent: 'Test', action: 'test.tenant_env' },
+        async (x: number) => x
+      );
+      await runWithCorrelationId('corr-tenant-env', async () => {
+        await fn(1);
+      });
+      assert.strictEqual(getOutbox().getEvents()[0].tenant_id, 'tnt_from_env');
+    } finally {
+      if (prevTenant === undefined) {
+        delete process.env.INTENTPROOF_TENANT_ID;
+      } else {
+        process.env.INTENTPROOF_TENANT_ID = prevTenant;
+      }
+    }
+  });
+
+  it('auto-generates correlation ids outside runWithCorrelationId', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Test', action: 'test.auto_corr' },
+      async (x: number) => x
+    );
+    await fn(1);
+    const correlationId = getOutbox().getEvents()[0].correlation_id;
+    assert.match(correlationId, /^req_/);
+  });
+
+  it('flush is a no-op when ingest export is not configured', async () => {
+    const prevURL = process.env.INTENTPROOF_INGEST_URL;
+    const prevLocal = process.env.INTENTPROOF_USE_LOCAL_INGEST;
+    delete process.env.INTENTPROOF_INGEST_URL;
+    delete process.env.INTENTPROOF_USE_LOCAL_INGEST;
+    try {
+      configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+      await flush();
+    } finally {
+      if (prevURL === undefined) {
+        delete process.env.INTENTPROOF_INGEST_URL;
+      } else {
+        process.env.INTENTPROOF_INGEST_URL = prevURL;
+      }
+      if (prevLocal === undefined) {
+        delete process.env.INTENTPROOF_USE_LOCAL_INGEST;
+      } else {
+        process.env.INTENTPROOF_USE_LOCAL_INGEST = prevLocal;
+      }
+    }
   });
 
   it('persists keypair across configure calls', async () => {
@@ -76,6 +203,8 @@ describe('SDK', () => {
     assert.ok(ev.signature, 'event must have a signature');
     assert.strictEqual(ev.signature.alg, 'ed25519');
     assert.ok(ev.signature.value, 'signature value must be present');
+    assert.strictEqual(ev.provenance_class, 'sdk_attested_evidence');
+    assert.strictEqual(ev.untrusted_payload, true);
   });
 
   it('maintains chain continuity across restarts', async () => {
@@ -182,5 +311,26 @@ describe('SDK', () => {
     const ed = require('@noble/ed25519');
     const valid = await ed.verifyAsync(sig, new Uint8Array(hash), pub);
     assert.strictEqual(valid, true, 'signature must verify against public key');
+  });
+
+  it('records failed wrapped calls and preserves the thrown error message', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Failing call', action: 'test.error' },
+      async () => {
+        throw new Error('customer failure');
+      }
+    );
+
+    await assert.rejects(
+      () => runWithCorrelationId('corr-error', async () => fn()),
+      /customer failure/
+    );
+
+    const events = getOutbox().getEvents();
+    assert.strictEqual(events.length, 1, 'failed call should still be stored');
+    assert.strictEqual(events[0].status, 'error');
+    assert.deepStrictEqual(events[0].error, { message: 'customer failure' });
+    assert.strictEqual(events[0].output, null);
   });
 });
