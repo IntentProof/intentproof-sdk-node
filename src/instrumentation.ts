@@ -54,10 +54,12 @@ export function wrap<T extends (...args: any[]) => any>(
     let status: 'ok' | 'error' = 'ok';
     let errorObj: { message: string } | null = null;
     let thrownError: unknown;
+    let didThrow = false;
 
     try {
       result = await fn(...args);
     } catch (e: any) {
+      didThrow = true;
       status = 'error';
       errorObj = { message: e?.message ?? String(e) };
       thrownError = e;
@@ -112,18 +114,22 @@ export function wrap<T extends (...args: any[]) => any>(
         exporter.enqueue(signed);
       }
     } catch (recordError) {
-      if (thrownError !== undefined) {
-        const err =
-          thrownError instanceof Error
-            ? thrownError
-            : new Error(String(thrownError));
-        (err as Error & { cause?: unknown }).cause = recordError;
-        throw err;
+      if (didThrow) {
+        if (thrownError instanceof Error) {
+          (thrownError as Error & { cause?: unknown }).cause = recordError;
+          throw thrownError;
+        }
+        if (thrownError !== undefined) {
+          const err = new Error(String(thrownError));
+          (err as Error & { cause?: unknown }).cause = recordError;
+          throw err;
+        }
+        throw undefined;
       }
       throw recordError;
     }
 
-    if (thrownError !== undefined) {
+    if (didThrow) {
       throw thrownError;
     }
     return result;

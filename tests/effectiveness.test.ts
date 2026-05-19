@@ -89,6 +89,21 @@ describe('SDK effectiveness', () => {
     );
   });
 
+  it('rethrows when the wrapped function throws undefined', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Throw undefined', action: 'test.throw_undefined' },
+      async () => {
+        throw undefined;
+      }
+    );
+
+    await assert.rejects(() => fn(), (err: unknown) => err === undefined);
+    const events = getOutbox().getEvents();
+    assert.strictEqual(events.length, 1);
+    assert.strictEqual(events[0].status, 'error');
+  });
+
   it('preserves app errors when outbox recording fails', async () => {
     configure({ dbPath, dataDir, tenantId: 'tnt_a' });
     const outbox = getOutbox();
