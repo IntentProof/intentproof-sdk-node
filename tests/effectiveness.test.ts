@@ -134,6 +134,33 @@ describe('SDK effectiveness', () => {
     outbox.append = originalAppend;
   });
 
+  it('preserves existing error.cause when recording fails', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const outbox = getOutbox();
+    outbox.append = () => {
+      throw new Error('outbox unavailable');
+    };
+
+    const root = new Error('root failure');
+    const fn = wrap(
+      { intent: 'Chained fail', action: 'test.chained_record_fail' },
+      async () => {
+        throw new Error('boom', { cause: root });
+      }
+    );
+
+    await assert.rejects(
+      () => fn(),
+      (err: Error) => {
+        assert.match(err.message, /boom/);
+        const recording = err.cause as Error;
+        assert.match(recording.message, /outbox unavailable/);
+        assert.strictEqual(recording.cause, root);
+        return true;
+      }
+    );
+  });
+
   it('sets untrusted_payload false when nothing is captured', async () => {
     configure({ dbPath, dataDir, tenantId: 'tnt_a' });
     const fn = wrap(

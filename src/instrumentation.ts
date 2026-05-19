@@ -41,6 +41,28 @@ function untrustedPayload(
   return status === 'ok' && output !== null && output !== undefined;
 }
 
+function toError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
+}
+
+/** Attach a recording failure without replacing an existing customer cause. */
+function attachRecordingFailureCause(
+  thrownError: Error,
+  recordError: unknown
+): Error {
+  const recording = toError(recordError);
+  const priorCause = thrownError.cause;
+  if (priorCause === undefined) {
+    (thrownError as Error & { cause?: unknown }).cause = recording;
+    return thrownError;
+  }
+  if (recording.cause === undefined) {
+    (recording as Error & { cause?: unknown }).cause = priorCause;
+  }
+  (thrownError as Error & { cause?: unknown }).cause = recording;
+  return thrownError;
+}
+
 export function wrap<T extends (...args: any[]) => any>(
   options: { intent: string; action: string },
   fn: T
@@ -116,8 +138,7 @@ export function wrap<T extends (...args: any[]) => any>(
     } catch (recordError) {
       if (didThrow) {
         if (thrownError instanceof Error) {
-          (thrownError as Error & { cause?: unknown }).cause = recordError;
-          throw thrownError;
+          throw attachRecordingFailureCause(thrownError, recordError);
         }
         if (thrownError !== undefined) {
           const err = new Error(String(thrownError));
