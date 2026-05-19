@@ -15,6 +15,15 @@ export function resolveIngestURL(explicit?: string): string | null {
   return null;
 }
 
+export function ingestRequestHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = (process.env.INTENTPROOF_INGEST_TOKEN ?? '').trim();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 function normalizeIngestURL(raw: string): string {
   const trimmed = raw.trim().replace(/\/+$/, '');
   if (trimmed.endsWith('/v1/events')) {
@@ -35,7 +44,7 @@ export class HttpExporter {
     const body = JSON.stringify(event);
     const task = fetch(this.ingestURL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ingestRequestHeaders(),
       body,
     })
       .then(async (res) => {

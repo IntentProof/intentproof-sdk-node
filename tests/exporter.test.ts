@@ -4,7 +4,7 @@ import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { resolveIngestURL } from '../src/exporter';
+import { ingestRequestHeaders, resolveIngestURL } from '../src/exporter';
 import { configure, wrap, runWithCorrelationId, flush } from '../src/index';
 
 describe('exporter', () => {
@@ -21,6 +21,23 @@ describe('exporter', () => {
       resolveIngestURL('http://127.0.0.1:9787/v1/events/'),
       'http://127.0.0.1:9787/v1/events'
     );
+  });
+
+  it('ingestRequestHeaders includes bearer token when configured', () => {
+    const prev = process.env.INTENTPROOF_INGEST_TOKEN;
+    process.env.INTENTPROOF_INGEST_TOKEN = 'ingest-secret';
+    try {
+      assert.strictEqual(
+        ingestRequestHeaders().Authorization,
+        'Bearer ingest-secret'
+      );
+    } finally {
+      if (prev === undefined) {
+        delete process.env.INTENTPROOF_INGEST_TOKEN;
+      } else {
+        process.env.INTENTPROOF_INGEST_TOKEN = prev;
+      }
+    }
   });
 
   it('resolveIngestURL uses INTENTPROOF_USE_LOCAL_INGEST', () => {
@@ -84,6 +101,58 @@ describe('HTTP export from wrap()', () => {
   afterEach(async () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('POSTs signed events with ingest bearer token when configured', async () => {
+    const prevToken = process.env.INTENTPROOF_INGEST_TOKEN;
+    process.env.INTENTPROOF_INGEST_TOKEN = 'ingest-secret';
+    let authHeader = '';
+    const authedServer = http.createServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/v1/events') {
+        authHeader = req.headers.authorization ?? '';
+        const chunks: Buffer[] = [];
+        req.on('data', (c) => chunks.push(c));
+        req.on('end', () => {
+          res.writeHead(202);
+          res.end();
+        });
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+    await new Promise<void>((resolve) => {
+      authedServer.listen(0, '127.0.0.1', () => resolve());
+    });
+    const authedAddr = authedServer.address();
+    if (!authedAddr || typeof authedAddr === 'string') {
+      throw new Error('no server address');
+    }
+    const authedURL = `http://127.0.0.1:${authedAddr.port}/v1/events`;
+    try {
+      configure({
+        dbPath: path.join(tmpDir, 'outbox-auth.db'),
+        dataDir: path.join(tmpDir, 'data-auth'),
+        tenantId: 'tnt_test',
+        ingestUrl: authedURL,
+      });
+      const fn = wrap(
+        { intent: 'Export', action: 'export.auth' },
+        async (n: number) => n + 1
+      );
+      await runWithCorrelationId('corr-export-auth', async () => {
+        await fn(1);
+      });
+      await flush();
+      assert.strictEqual(authHeader, 'Bearer ingest-secret');
+    } finally {
+      await new Promise<void>((resolve) => authedServer.close(() => resolve()));
+      if (prevToken === undefined) {
+        delete process.env.INTENTPROOF_INGEST_TOKEN;
+      } else {
+        process.env.INTENTPROOF_INGEST_TOKEN = prevToken;
+      }
+    }
   });
 
   it('POSTs signed events when ingestUrl is configured', async () => {

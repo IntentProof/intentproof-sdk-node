@@ -17,7 +17,10 @@ Node.js SDK for emitting signed `ExecutionEvent` records to IntentProof.
 3. Start local ingest (`intentproof local`) or set hosted ingest URL:
    - `INTENTPROOF_INGEST_URL=http://127.0.0.1:9787` (appends `/v1/events`)
    - or `INTENTPROOF_USE_LOCAL_INGEST=1` for the default local URL
-4. Call `flush()` before process exit to await in-flight exports.
+4. For **hosted** ingest that requires bearer auth, set
+   `INTENTPROOF_INGEST_TOKEN` to your tenant ingest token (sent as
+   `Authorization: Bearer …` on export). Local loop ingest does not use this.
+5. Call `flush()` before process exit to await in-flight exports.
 
 ## Local key and data directory
 
