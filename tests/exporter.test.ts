@@ -4,7 +4,7 @@ import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { ingestRequestHeaders, resolveIngestURL } from '../src/exporter';
+import { HttpExporter, ingestRequestHeaders, resolveIngestURL } from '../src/exporter';
 import { configure, wrap, runWithCorrelationId, flush } from '../src/index';
 
 describe('exporter', () => {
@@ -61,6 +61,43 @@ describe('exporter', () => {
       } else {
         process.env.INTENTPROOF_INGEST_URL = prevURL;
       }
+    }
+  });
+
+  it('logs non-2xx ingest responses without throwing', async () => {
+    const warnings: string[] = [];
+    const prevWarn = console.warn;
+    console.warn = (message?: unknown) => {
+      warnings.push(String(message));
+    };
+
+    const failingServer = http.createServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/v1/events') {
+        req.resume();
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('boom');
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+
+    await new Promise<void>((resolve) => {
+      failingServer.listen(0, '127.0.0.1', () => resolve());
+    });
+    const addr = failingServer.address();
+    if (!addr || typeof addr === 'string') {
+      throw new Error('no server address');
+    }
+
+    try {
+      const exporter = new HttpExporter(`http://127.0.0.1:${addr.port}/v1/events`);
+      exporter.enqueue({ event_id: 'evt_failure' });
+      await exporter.flush();
+      assert.match(warnings.join('\n'), /ingest POST 500: boom/);
+    } finally {
+      console.warn = prevWarn;
+      await new Promise<void>((resolve) => failingServer.close(() => resolve()));
     }
   });
 });

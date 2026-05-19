@@ -27,6 +27,21 @@ describe('SDK', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  it('requires configure before reading instance metadata', async () => {
+    const indexPath = require.resolve('../src/index');
+    delete require.cache[indexPath];
+    const fresh = require('../src/index') as typeof import('../src/index');
+
+    assert.throws(
+      () => fresh.getInstanceId(),
+      /SDK not configured: call configure\(\) before getInstanceId\(\)/
+    );
+    await assert.rejects(
+      () => fresh.getPublicKey(),
+      /SDK not configured: call configure\(\) before getPublicKey\(\)/
+    );
+  });
+
   it('persists keypair across configure calls', async () => {
     configure({ dbPath, dataDir, tenantId: 'tnt_a' });
     const id1 = getInstanceId();
@@ -182,5 +197,26 @@ describe('SDK', () => {
     const ed = require('@noble/ed25519');
     const valid = await ed.verifyAsync(sig, new Uint8Array(hash), pub);
     assert.strictEqual(valid, true, 'signature must verify against public key');
+  });
+
+  it('records failed wrapped calls and preserves the thrown error message', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Failing call', action: 'test.error' },
+      async () => {
+        throw new Error('customer failure');
+      }
+    );
+
+    await assert.rejects(
+      () => runWithCorrelationId('corr-error', async () => fn()),
+      /customer failure/
+    );
+
+    const events = getOutbox().getEvents();
+    assert.strictEqual(events.length, 1, 'failed call should still be stored');
+    assert.strictEqual(events[0].status, 'error');
+    assert.deepStrictEqual(events[0].error, { message: 'customer failure' });
+    assert.strictEqual(events[0].output, null);
   });
 });

@@ -90,6 +90,7 @@ export function wrap<T extends (...args: any[]) => any>(
     let status: 'ok' | 'error' = 'ok';
     let errorObj = null;
     let reraise = false;
+    let thrownError: unknown;
 
     try {
       result = await fn(...args);
@@ -97,6 +98,7 @@ export function wrap<T extends (...args: any[]) => any>(
       status = 'error';
       errorObj = { message: e.message };
       reraise = true;
+      thrownError = e;
     }
     const t1 = Date.now();
 
@@ -159,7 +161,7 @@ export function wrap<T extends (...args: any[]) => any>(
     }
 
     if (reraise) {
-      throw errorObj;
+      throw thrownError;
     }
     return result;
   };
