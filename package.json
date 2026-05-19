@@ -2,11 +2,12 @@
   "name": "intentproof-sdk-node",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "test": "node -r ts-node/register --test tests/*.test.ts"
   },
   "keywords": [],
