@@ -10,6 +10,7 @@ import {
   getOutbox,
   getInstanceId,
   getPublicKey,
+  flush,
 } from '../src/index';
 
 describe('SDK', () => {
@@ -40,6 +41,104 @@ describe('SDK', () => {
       () => fresh.getPublicKey(),
       /SDK not configured: call configure\(\) before getPublicKey\(\)/
     );
+  });
+
+  it('creates nested dataDir on first configure', () => {
+    const nestedDir = path.join(tmpDir, 'nested', 'sdk-data');
+    configure({ dbPath, dataDir: nestedDir, tenantId: 'tnt_a' });
+    assert.ok(fs.existsSync(nestedDir));
+    assert.ok(fs.existsSync(path.join(nestedDir, 'keypair.json')));
+  });
+
+  it('defaults tenant id when tenantId and env are unset', async () => {
+    const prevTenant = process.env.INTENTPROOF_TENANT_ID;
+    delete process.env.INTENTPROOF_TENANT_ID;
+    try {
+      configure({ dbPath, dataDir });
+      const fn = wrap(
+        { intent: 'Test', action: 'test.tenant_default' },
+        async (x: number) => x
+      );
+      await runWithCorrelationId('corr-tenant-default', async () => {
+        await fn(1);
+      });
+      assert.strictEqual(getOutbox().getEvents()[0].tenant_id, 'tnt_default');
+    } finally {
+      if (prevTenant === undefined) {
+        delete process.env.INTENTPROOF_TENANT_ID;
+      } else {
+        process.env.INTENTPROOF_TENANT_ID = prevTenant;
+      }
+    }
+  });
+
+  it('loads an existing keypair from disk', () => {
+    const crypto = require('crypto');
+    const kp = {
+      privateKey: Buffer.from(crypto.randomBytes(32)).toString('base64'),
+      instanceId: 'inst_existing',
+    };
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'keypair.json'), JSON.stringify(kp), {
+      mode: 0o600,
+    });
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    assert.strictEqual(getInstanceId(), 'inst_existing');
+  });
+
+  it('uses INTENTPROOF_TENANT_ID when tenantId is omitted', async () => {
+    const prevTenant = process.env.INTENTPROOF_TENANT_ID;
+    process.env.INTENTPROOF_TENANT_ID = 'tnt_from_env';
+    try {
+      configure({ dbPath, dataDir });
+      const fn = wrap(
+        { intent: 'Test', action: 'test.tenant_env' },
+        async (x: number) => x
+      );
+      await runWithCorrelationId('corr-tenant-env', async () => {
+        await fn(1);
+      });
+      assert.strictEqual(getOutbox().getEvents()[0].tenant_id, 'tnt_from_env');
+    } finally {
+      if (prevTenant === undefined) {
+        delete process.env.INTENTPROOF_TENANT_ID;
+      } else {
+        process.env.INTENTPROOF_TENANT_ID = prevTenant;
+      }
+    }
+  });
+
+  it('auto-generates correlation ids outside runWithCorrelationId', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const fn = wrap(
+      { intent: 'Test', action: 'test.auto_corr' },
+      async (x: number) => x
+    );
+    await fn(1);
+    const correlationId = getOutbox().getEvents()[0].correlation_id;
+    assert.match(correlationId, /^req_/);
+  });
+
+  it('flush is a no-op when ingest export is not configured', async () => {
+    const prevURL = process.env.INTENTPROOF_INGEST_URL;
+    const prevLocal = process.env.INTENTPROOF_USE_LOCAL_INGEST;
+    delete process.env.INTENTPROOF_INGEST_URL;
+    delete process.env.INTENTPROOF_USE_LOCAL_INGEST;
+    try {
+      configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+      await flush();
+    } finally {
+      if (prevURL === undefined) {
+        delete process.env.INTENTPROOF_INGEST_URL;
+      } else {
+        process.env.INTENTPROOF_INGEST_URL = prevURL;
+      }
+      if (prevLocal === undefined) {
+        delete process.env.INTENTPROOF_USE_LOCAL_INGEST;
+      } else {
+        process.env.INTENTPROOF_USE_LOCAL_INGEST = prevLocal;
+      }
+    }
   });
 
   it('persists keypair across configure calls', async () => {
