@@ -71,7 +71,7 @@ describe('SDK effectiveness', () => {
     assert.deepStrictEqual(client.getRedactKeys(), ['password', 'secret*']);
   });
 
-  it('surfaces outbox failures for successful wrapped calls', async () => {
+  it('returns wrapped result when outbox recording fails', async () => {
     configure({ dbPath, dataDir, tenantId: 'tnt_a' });
     const outbox = getOutbox();
     outbox.append = () => {
@@ -83,9 +83,69 @@ describe('SDK effectiveness', () => {
       async () => 'ok'
     );
 
+    const warnings: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (msg?: unknown) => {
+      warnings.push(String(msg));
+    };
+    try {
+      assert.strictEqual(await fn(), 'ok');
+    } finally {
+      console.warn = origWarn;
+    }
+    assert.ok(
+      warnings.some((w) => w.includes('execution record failed')),
+      `expected warning, got: ${warnings.join('; ')}`
+    );
+  });
+
+  it('logs string record failures for successful wrapped calls', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const outbox = getOutbox();
+    outbox.append = () => {
+      throw 'disk full';
+    };
+
+    const fn = wrap(
+      { intent: 'Record fail', action: 'test.record_fail_string' },
+      async () => 7
+    );
+
+    const warnings: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (msg?: unknown) => {
+      warnings.push(String(msg));
+    };
+    try {
+      assert.strictEqual(await fn(), 7);
+    } finally {
+      console.warn = origWarn;
+    }
+    assert.ok(warnings.some((w) => w.includes('disk full')));
+  });
+
+  it('preserves non-Error throws when outbox recording fails', async () => {
+    configure({ dbPath, dataDir, tenantId: 'tnt_a' });
+    const outbox = getOutbox();
+    outbox.append = () => {
+      throw new Error('outbox unavailable');
+    };
+
+    const fn = wrap(
+      { intent: 'Fail record', action: 'test.non_error_throw' },
+      async () => {
+        throw 'boom';
+      }
+    );
+
     await assert.rejects(
       () => fn(),
-      /outbox unavailable/
+      (err: Error) => {
+        assert.match(err.message, /boom/);
+        assert.ok(err.cause instanceof Error);
+        assert.match((err.cause as Error).message, /outbox unavailable/);
+        return true;
+      }
     );
   });
 
