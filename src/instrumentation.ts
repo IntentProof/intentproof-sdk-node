@@ -45,6 +45,12 @@ function toError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value));
 }
 
+function logExecutionRecordFailure(recordError: unknown): void {
+  const msg =
+    recordError instanceof Error ? recordError.message : String(recordError);
+  console.warn(`[intentproof] execution record failed: ${msg}`);
+}
+
 /** Attach a recording failure without replacing an existing customer cause. */
 function attachRecordingFailureCause(
   thrownError: Error,
@@ -147,7 +153,7 @@ export function wrap<T extends (...args: any[]) => any>(
         }
         throw undefined;
       }
-      throw recordError;
+      logExecutionRecordFailure(recordError);
     }
 
     if (didThrow) {
