@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "TS_NODE_PREFER_TS_EXTS=true node -r ts-node/register --test tests/*.test.ts",
-    "test:coverage": "TS_NODE_PREFER_TS_EXTS=true node --experimental-test-coverage --test-coverage-include='src/**/*.ts' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 -r ts-node/register --test tests/*.test.ts"
+    "test:coverage": "npm run build && node --experimental-test-coverage --test-coverage-include='dist/**/*.js' --test-coverage-exclude='dist/index.js' --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 -r ts-node/register -r ./tests/preload-dist.cjs --test tests/*.test.ts"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +25,8 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^25.7.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "ts-node": "^10.9.2"
   }
 }

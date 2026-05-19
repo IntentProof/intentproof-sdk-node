@@ -29,17 +29,30 @@ describe('SDK', () => {
   });
 
   it('requires configure before reading instance metadata', async () => {
-    const indexPath = require.resolve('../src/index');
-    delete require.cache[indexPath];
-    const fresh = require('../src/index') as typeof import('../src/index');
+    const clientPath = require.resolve('../src/client');
+    delete require.cache[clientPath];
+    delete require.cache[require.resolve('../src/index')];
+    const freshClient = require('../src/client') as typeof import('../src/client');
 
     assert.throws(
-      () => fresh.getInstanceId(),
+      () => freshClient.getInstanceId(),
       /SDK not configured: call configure\(\) before getInstanceId\(\)/
     );
     await assert.rejects(
-      () => fresh.getPublicKey(),
+      () => freshClient.getPublicKey(),
       /SDK not configured: call configure\(\) before getPublicKey\(\)/
+    );
+    assert.throws(
+      () => freshClient.getPrivateKey(),
+      /SDK not configured: call configure\(\) before getPrivateKey\(\)/
+    );
+    assert.throws(
+      () => freshClient.getOutbox(),
+      /SDK not configured: call configure\(\) before getOutbox\(\)/
+    );
+    assert.throws(
+      () => freshClient.getTenantId(),
+      /SDK not configured: call configure\(\) before getTenantId\(\)/
     );
   });
 
@@ -190,6 +203,8 @@ describe('SDK', () => {
     assert.ok(ev.signature, 'event must have a signature');
     assert.strictEqual(ev.signature.alg, 'ed25519');
     assert.ok(ev.signature.value, 'signature value must be present');
+    assert.strictEqual(ev.provenance_class, 'sdk_attested_evidence');
+    assert.strictEqual(ev.untrusted_payload, true);
   });
 
   it('maintains chain continuity across restarts', async () => {

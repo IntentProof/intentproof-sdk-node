@@ -13,6 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout spec repository
+        uses: actions/checkout@v4
+        with:
+          repository: IntentProof/intentproof-spec
+          ref: main
+          path: intentproof-spec
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -22,4 +29,6 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
+        env:
+          INTENTPROOF_SPEC_DIR: intentproof-spec
         run: npm run test:coverage

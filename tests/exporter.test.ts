@@ -239,6 +239,66 @@ describe('exporter', () => {
 });
 
 describe('HTTP export from wrap()', () => {
+  it('flushes prior exporter when configure is called again', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdk-export-reconfig-'));
+    let flushCount = 0;
+    const prevToken = process.env.INTENTPROOF_INGEST_TOKEN;
+    process.env.INTENTPROOF_INGEST_TOKEN = 'ingest-secret';
+
+    const server = http.createServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/v1/events') {
+        req.resume();
+        res.writeHead(202);
+        res.end();
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+    await new Promise<void>((resolve) => {
+      server.listen(0, '127.0.0.1', () => resolve());
+    });
+    const addr = server.address();
+    if (!addr || typeof addr === 'string') {
+      throw new Error('no server address');
+    }
+    const url = `http://127.0.0.1:${addr.port}/v1/events`;
+
+    try {
+      configure({
+        dbPath: path.join(tmpDir, 'a.db'),
+        dataDir: path.join(tmpDir, 'data-a'),
+        tenantId: 'tnt_test',
+        ingestUrl: url,
+      });
+      const exporter = (
+        require('../src/client') as typeof import('../src/client')
+      ).getExporter();
+      assert.ok(exporter);
+      const originalFlush = exporter!.flush.bind(exporter);
+      exporter!.flush = async () => {
+        flushCount += 1;
+        return originalFlush();
+      };
+
+      configure({
+        dbPath: path.join(tmpDir, 'b.db'),
+        dataDir: path.join(tmpDir, 'data-b'),
+        tenantId: 'tnt_test',
+        ingestUrl: url,
+      });
+      assert.strictEqual(flushCount, 1);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      if (prevToken === undefined) {
+        delete process.env.INTENTPROOF_INGEST_TOKEN;
+      } else {
+        process.env.INTENTPROOF_INGEST_TOKEN = prevToken;
+      }
+    }
+  });
+
   let tmpDir: string;
   let server: http.Server;
   let received: any[];
