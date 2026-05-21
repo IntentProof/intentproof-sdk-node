@@ -1,0 +1,223 @@
+name: release npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Git ref to build and publish from.
+        required: true
+        default: refs/heads/main
+        type: string
+      release_version:
+        description: SemVer version for dry-run metadata (without v prefix).
+        required: true
+        default: 0.0.0-dryrun
+        type: string
+      npm_dist_tag:
+        description: npm dist-tag for dry-run publishes (for example next).
+        required: true
+        default: next
+        type: string
+      publish_to_npm:
+        description: Publish to npm with provenance (requires npm trusted publisher).
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  test:
+    name: "IntentProof Release: Test npm Package"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_ref || github.ref }}
+
+      - name: Checkout spec repository
+        uses: actions/checkout@v4
+        with:
+          repository: IntentProof/intentproof-spec
+          ref: main
+          path: intentproof-spec
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        env:
+          INTENTPROOF_SPEC_DIR: intentproof-spec
+        run: npm run test:coverage
+
+  pack:
+    name: "IntentProof Release: Pack npm Package"
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_paths: ${{ steps.pack.outputs.artifact_paths }}
+      release_ref: ${{ steps.release.outputs.release_ref }}
+      release_version: ${{ steps.release.outputs.release_version }}
+      npm_dist_tag: ${{ steps.release.outputs.npm_dist_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_ref || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Resolve release metadata
+        id: release
+        env:
+          INPUT_NPM_DIST_TAG: ${{ inputs.npm_dist_tag }}
+          INPUT_RELEASE_REF: ${{ inputs.release_ref }}
+          INPUT_RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+          semver_tag='^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            release_ref="$INPUT_RELEASE_REF"
+            release_version="$INPUT_RELEASE_VERSION"
+            npm_dist_tag="$INPUT_NPM_DIST_TAG"
+          else
+            release_ref="${GITHUB_REF}"
+            release_version="${GITHUB_REF_NAME#v}"
+            if [[ "$release_ref" =~ $semver_tag ]]; then
+              if [[ "$release_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                npm_dist_tag="latest"
+              else
+                npm_dist_tag="${release_version#*-}"
+                npm_dist_tag="${npm_dist_tag%%.*}"
+              fi
+            else
+              echo "tag ref must match vMAJOR.MINOR.PATCH: ${release_ref}" >&2
+              exit 1
+            fi
+          fi
+
+          {
+            echo "release_ref=${release_ref}"
+            echo "release_version=${release_version}"
+            echo "npm_dist_tag=${npm_dist_tag}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync package version
+        run: npm version "${{ steps.release.outputs.release_version }}" --no-git-tag-version --allow-same-version
+
+      - name: Build package
+        run: npm run build
+
+      - name: Pack npm tarball
+        id: pack
+        run: |
+          set -euo pipefail
+          npm pack
+          mapfile -t tarballs < <(find . -maxdepth 1 -type f -name '*.tgz' | sort)
+          test "${#tarballs[@]}" -eq 1
+          {
+            echo "artifact_paths<<EOF"
+            printf '%s\n' "${tarballs[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-release-package
+          path: ./*.tgz
+
+  sign:
+    name: "IntentProof Release: Sign npm Package Tarball"
+    needs: pack
+    uses: IntentProof/intentproof-tools/.github/workflows/release-build-sign.yml@317387a9724787e4ac484f39de46d7e559b6c98d
+    with:
+      artifact_kind: generic
+      subject_name: '@intentproof/sdk'
+      release_version: ${{ needs.pack.outputs.release_version }}
+      release_ref: ${{ needs.pack.outputs.release_ref }}
+      artifact_paths: ${{ needs.pack.outputs.artifact_paths }}
+      artifact_download_name: npm-release-package
+      artifact_download_path: .
+      sbom_extra_paths: .
+      attest_to_rekor: ${{ github.event_name != 'workflow_dispatch' }}
+
+  publish:
+    name: "IntentProof Release: Publish npm Package"
+    needs: pack
+    if: github.event_name != 'workflow_dispatch' || inputs.publish_to_npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release-package
+          path: .
+
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@11
+
+      - name: Publish with npm provenance
+        run: |
+          set -euo pipefail
+          mapfile -t tarballs < <(find . -maxdepth 1 -type f -name '*.tgz' | sort)
+          test "${#tarballs[@]}" -eq 1
+          npm publish "${tarballs[0]}" --provenance --access public --tag "${{ needs.pack.outputs.npm_dist_tag }}"
+
+  upload-release:
+    name: "IntentProof Release: Publish npm Release Artifacts"
+    needs:
+      - pack
+      - sign
+      - publish
+    if: github.event_name != 'workflow_dispatch' && needs.pack.result == 'success' && needs.sign.result == 'success' && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release-package
+          path: release-package
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-signing-metadata
+          path: release-signing-metadata
+
+      - name: Upload tarball and signing metadata to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find release-package release-signing-metadata -type f | sort)
+          test "${#files[@]}" -gt 0
+
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --generate-notes
+          fi
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
