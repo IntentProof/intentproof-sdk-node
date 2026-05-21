@@ -166,24 +166,22 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.pack.outputs.release_ref }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Sync package version
-        run: npm version "${{ needs.pack.outputs.release_version }}" --no-git-tag-version --allow-same-version
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release-package
+          path: .
 
       - name: Publish with npm provenance
-        run: npm publish --provenance --access public --tag "${{ needs.pack.outputs.npm_dist_tag }}"
+        run: |
+          set -euo pipefail
+          mapfile -t tarballs < <(find . -maxdepth 1 -type f -name '*.tgz' | sort)
+          test "${#tarballs[@]}" -eq 1
+          npm publish "${tarballs[0]}" --provenance --access public --tag "${{ needs.pack.outputs.npm_dist_tag }}"
 
   upload-release:
     name: "IntentProof Release: Publish npm Release Artifacts"
