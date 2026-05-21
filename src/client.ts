@@ -9,7 +9,7 @@ import { HttpExporter, resolveIngestURL } from './exporter';
 import { Outbox } from './outbox';
 import { loadPrivateKey } from './signing';
 
-export const SDK_VERSION = 'node@1.0.0';
+export const SDK_VERSION = 'node@0.2.0';
 
 interface Keypair {
   privateKey: string;

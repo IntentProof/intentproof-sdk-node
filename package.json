@@ -1,6 +1,6 @@
 {
   "name": "@intentproof/sdk",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "Node.js SDK for signed IntentProof execution events",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
