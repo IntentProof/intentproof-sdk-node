@@ -281,22 +281,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
 
       - uses: actions/download-artifact@v4
         with:
           name: npm-release-package
           path: .
 
-      - name: Upgrade npm for trusted publishing
-        run: npm install -g npm@11
-
       - name: Publish with npm provenance
+        env:
+          NODE_AUTH_TOKEN: ''
         run: |
           set -euo pipefail
+          npm --version
           mapfile -t tarballs < <(find . -maxdepth 1 -type f -name '*.tgz' | sort)
           test "${#tarballs[@]}" -eq 1
-          npm publish "${tarballs[0]}" --provenance --access public --tag "${{ needs.pack.outputs.npm_dist_tag }}"
+          npm publish "${tarballs[0]}" --provenance --access public \
+            --registry=https://registry.npmjs.org \
+            --tag "${{ needs.pack.outputs.npm_dist_tag }}"
 
   upload-release:
     name: "IntentProof Release: Publish npm Release Artifacts"
