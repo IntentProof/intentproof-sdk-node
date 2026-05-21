@@ -48,7 +48,7 @@ jobs:
           repository: IntentProof/intentproof-tools
           ref: 552da9dc027962c88b62bca96103f24b9573563e
           path: intentproof-tools
-          sparse-checkout: codeql/intentproof-extra
+          sparse-checkout: codeql/intentproof-extra/javascript
           sparse-checkout-cone-mode: true
       - uses: actions/setup-node@v4
         with:
@@ -60,7 +60,8 @@ jobs:
           languages: ${{ matrix.language }}
           queries: >-
             security-and-quality,
-            ./intentproof-tools/codeql/intentproof-extra/javascript
+            ./intentproof-tools/codeql/intentproof-extra/javascript/ForbiddenEvalEquivalent.ql,
+            ./intentproof-tools/codeql/intentproof-extra/javascript/UnsanitizedTemplateRendering.ql
       - uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
