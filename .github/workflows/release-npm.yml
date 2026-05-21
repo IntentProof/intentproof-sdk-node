@@ -281,6 +281,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
 
       - uses: actions/download-artifact@v4
         with:
@@ -288,15 +289,15 @@ jobs:
           path: .
 
       - name: Publish with npm provenance
-        env:
-          NODE_AUTH_TOKEN: ''
         run: |
           set -euo pipefail
+          if [[ -n "${NPM_CONFIG_USERCONFIG:-}" && -f "$NPM_CONFIG_USERCONFIG" ]]; then
+            sed -i '/:_authToken=/d' "$NPM_CONFIG_USERCONFIG"
+          fi
           npm --version
           mapfile -t tarballs < <(find . -maxdepth 1 -type f -name '*.tgz' | sort)
           test "${#tarballs[@]}" -eq 1
           npm publish "${tarballs[0]}" --provenance --access public \
-            --registry=https://registry.npmjs.org \
             --tag "${{ needs.pack.outputs.npm_dist_tag }}"
 
   upload-release:
