@@ -28,16 +28,13 @@ entries = []
 current = None
 for line in text.splitlines():
     stripped = line.strip()
-    if stripped.startswith("- "):
+    if stripped.startswith("- ") and "rule_id:" in stripped:
         if current:
             entries.append(current)
         current = {}
         m = re.search(r"rule_id:\s*(\S+)", stripped)
         if m:
             current["rule_id"] = m.group(1)
-        m = re.match(r"expires:\s*(\S+)", stripped[2:].strip())
-        if m:
-            current["expires"] = m.group(1)
         continue
     if current is None:
         continue
