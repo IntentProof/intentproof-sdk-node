@@ -13,7 +13,7 @@ paths = [
   '''\.git/''',
   '''coverage/''',
   '''package-lock\.json''',
-  '''test/fixtures/''',
+  '''tests/fixtures/''',
 ]
 # Example test vectors and documentation placeholders only.
 regexes = [
