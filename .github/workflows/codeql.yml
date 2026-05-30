@@ -18,7 +18,7 @@ jobs:
     name: "IntentProof Security: CodeQL Allowlist"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate allowlist expiry dates
         run: bash ./scripts/check-codeql-allowlist.sh
@@ -27,7 +27,7 @@ jobs:
     name: "IntentProof Security: Secret Scan"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -50,10 +50,10 @@ jobs:
       matrix:
         language: [javascript-typescript]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Checkout intentproof-tools for custom query pack
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: IntentProof/intentproof-tools
           ref: b4c7cb147404238c59388c9fc7de963d69bc2bb3
@@ -62,7 +62,7 @@ jobs:
             codeql/intentproof-extra-javascript
           sparse-checkout-cone-mode: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
@@ -71,12 +71,12 @@ jobs:
         run: npm ci
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality,./intentproof-tools/codeql/intentproof-extra-javascript
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"

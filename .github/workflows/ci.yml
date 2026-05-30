@@ -11,10 +11,10 @@ jobs:
     name: "IntentProof CI: Build and Test"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Checkout spec repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: IntentProof/intentproof-spec
           ref: main
@@ -28,7 +28,7 @@ jobs:
           git -C intentproof-spec fetch origin phase3-ecosystem-conformance
           git -C intentproof-spec checkout FETCH_HEAD
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
