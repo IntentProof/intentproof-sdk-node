@@ -11,7 +11,13 @@ import {
 } from '../src/signing';
 import { getPublicKeyAsync } from '@noble/ed25519';
 
-const fixtureDir = path.join(__dirname, 'fixtures');
+const fixtureDir = (() => {
+  const specDir = process.env.INTENTPROOF_SPEC_DIR?.trim();
+  if (specDir) {
+    return path.join(specDir, 'golden', 'sdk-signing');
+  }
+  return path.join(__dirname, 'fixtures');
+})();
 
 describe('shared signing golden fixtures', () => {
   it('matches Python cross-SDK canonical bytes, hash, and signature', async () => {
