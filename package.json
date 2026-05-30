@@ -7,8 +7,7 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE",
-    "NOTICE"
+    "LICENSE"
   ],
   "directories": {
     "test": "tests"
