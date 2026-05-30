@@ -9,7 +9,7 @@ Node.js SDK for signing IntentProof `ExecutionEvent` records locally.
 - `wrap(intent, action, fn)` instrumentation
 - Ed25519 signing and JCS canonicalization
 - SQLite outbox for durable local capture
-- Export events to your app or bundle pipeline (no hosted service required)
+- Export events to your app or bundle pipeline
 
 ## Install
 

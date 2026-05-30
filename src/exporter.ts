@@ -1,5 +1,5 @@
 /**
- * Posts signed ExecutionEvents to hosted or local ingest when configured.
+ * Posts signed ExecutionEvents to a configured ingest URL when set.
  */
 
 const DEFAULT_LOCAL_INGEST_URL = 'http://127.0.0.1:9787/v1/events';
