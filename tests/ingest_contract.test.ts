@@ -8,7 +8,7 @@ import { configure, wrap, runWithCorrelationId, flush } from '../src/index';
 import { assertValidExecutionEvent } from './helpers/spec_schema';
 
 /**
- * Minimal ingest contract exercised by hosted ingest tests: bearer required,
+ * Minimal ingest contract: bearer required when ingest auth is enabled,
  * JSON execution event body, 202 Accepted on success.
  */
 describe('ingest contract (local-loop shape)', () => {
