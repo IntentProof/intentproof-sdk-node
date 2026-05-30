@@ -32,3 +32,8 @@ jobs:
         env:
           INTENTPROOF_SPEC_DIR: intentproof-spec
         run: npm run test:coverage
+
+      - name: Verify sdk-signing fixtures synced with spec
+        env:
+          INTENTPROOF_SPEC_DIR: intentproof-spec
+        run: bash ./scripts/check-sdk-signing-fixtures-sync.sh
