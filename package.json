@@ -36,13 +36,13 @@
   "type": "commonjs",
   "dependencies": {
     "@noble/ed25519": "^3.1.0",
-    "better-sqlite3": "^12.0.0",
-    "json-canonicalize": "^2.0.0",
-    "typescript": "^6.0.3",
+    "better-sqlite3": "^13.0.3",
+    "json-canonicalize": "^3.0.0",
+    "typescript": "^7.0.2",
     "ulid": "^3.0.2"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.0.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
